@@ -2,7 +2,6 @@ import Link from "next/link";
 import { signOut } from "@/lib/auth";
 import { site } from "@/lib/site-config";
 import {
-  Clock,
   ClipboardList,
   FileText,
   ImageIcon,
@@ -23,7 +22,6 @@ const links = [
   { href: "/admin/recurring", label: "Recurring", icon: RefreshCw },
   { href: "/admin/gallery", label: "Gallery", icon: ImageIcon },
   { href: "/admin/emails", label: "Emails", icon: Mail },
-  { href: "/admin/availability", label: "Availability", icon: Clock },
   { href: "/admin/team", label: "Team", icon: Users },
   { href: "/admin/account", label: "Account", icon: KeyRound },
 ];

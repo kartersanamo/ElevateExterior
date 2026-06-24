@@ -1,10 +1,21 @@
 import { AdminCalendar } from "@/components/admin/AdminCalendar";
+import { AvailabilityManager } from "@/components/admin/AvailabilityManager";
 import { BookingActions } from "@/components/admin/BookingActions";
 import { db } from "@/lib/db";
 import { services } from "@/lib/site-config";
 import type { BookingStatus } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
+
+const DAY_NAMES = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+];
 
 function formatDate(date: Date): string {
   return date.toLocaleDateString("en-US", {
@@ -47,22 +58,44 @@ export default async function AdminBookingsPage({
       ? { status: statusFilter as BookingStatus }
       : {};
 
-  const bookings = await db.booking.findMany({
-    where,
-    orderBy: [{ scheduledDate: "desc" }, { startTime: "desc" }],
-    take: 100,
-  });
+  const [bookings, rules, blocked, settings] = await Promise.all([
+    db.booking.findMany({
+      where,
+      orderBy: [{ scheduledDate: "desc" }, { startTime: "desc" }],
+      take: 100,
+    }),
+    db.availabilityRule.findMany({ orderBy: { dayOfWeek: "asc" } }),
+    db.blockedDate.findMany({ orderBy: { date: "asc" } }),
+    db.siteSettings.findUnique({ where: { id: "default" } }),
+  ]);
+
+  const rulesWithNames = rules.map((r) => ({
+    ...r,
+    dayName: DAY_NAMES[r.dayOfWeek] ?? `Day ${r.dayOfWeek}`,
+  }));
+
+  const blockedFormatted = blocked.map((b) => ({
+    id: b.id,
+    date: b.date.toISOString().slice(0, 10),
+    reason: b.reason,
+  }));
 
   return (
     <div>
       <h1 className="font-display text-3xl font-bold text-forest">Bookings</h1>
       <p className="mt-2 text-slate/70">
-        Calendar view plus full booking details below.
+        Calendar, scheduling settings, and booking details in one place.
       </p>
 
       <div className="mt-8">
         <AdminCalendar />
       </div>
+
+      <AvailabilityManager
+        rules={rulesWithNames}
+        blocked={blockedFormatted}
+        slotDurationMinutes={settings?.slotDurationMinutes ?? 180}
+      />
 
       <div className="mt-10 flex flex-wrap gap-2">
         {["ALL", "PENDING", "CONFIRMED", "COMPLETED", "CANCELLED"].map(
