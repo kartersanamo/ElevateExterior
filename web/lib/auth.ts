@@ -16,13 +16,19 @@ declare module "next-auth" {
       id: string;
       email: string;
       name: string;
+      mustChangePassword: boolean;
     };
+  }
+
+  interface User {
+    mustChangePassword: boolean;
   }
 }
 
 declare module "@auth/core/jwt" {
   interface JWT {
     id: string;
+    mustChangePassword: boolean;
   }
 }
 
@@ -71,6 +77,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           id: user.id,
           email: user.email,
           name: user.name,
+          mustChangePassword: user.mustChangePassword,
         };
       },
     }),
@@ -79,12 +86,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id!;
+        token.mustChangePassword = user.mustChangePassword;
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user && token.id) {
         session.user.id = token.id as string;
+        session.user.mustChangePassword = Boolean(token.mustChangePassword);
       }
       return session;
     },

@@ -62,7 +62,6 @@ export async function updateBookingStatus(
 
   revalidatePath("/admin");
   revalidatePath("/admin/bookings");
-  revalidatePath("/admin/calendar");
   return { ok: true };
 }
 
@@ -102,7 +101,6 @@ export async function removeBlockedDate(id: string) {
   await requireAdmin();
   await db.blockedDate.delete({ where: { id } });
   revalidatePath("/admin/availability");
-  revalidatePath("/admin/calendar");
   return { ok: true };
 }
 
@@ -127,7 +125,6 @@ export async function blockTimeSlot(
   });
 
   revalidatePath("/admin/availability");
-  revalidatePath("/admin/calendar");
   revalidatePath("/admin/bookings");
   return { ok: true };
 }
@@ -136,7 +133,6 @@ export async function unblockTimeSlot(blockId: string) {
   await requireAdmin();
   await db.blockedTimeSlot.delete({ where: { id: blockId } });
   revalidatePath("/admin/availability");
-  revalidatePath("/admin/calendar");
   return { ok: true };
 }
 
@@ -150,7 +146,6 @@ export async function blockEntireDate(dateStr: string, reason?: string) {
     update: { reason: reason?.trim() || null },
   });
   revalidatePath("/admin/availability");
-  revalidatePath("/admin/calendar");
   return { ok: true };
 }
 
@@ -177,6 +172,7 @@ export async function createAdminUser(data: {
       name: data.name.trim(),
       email,
       passwordHash: await hashPassword(data.password),
+      mustChangePassword: true,
     },
   });
 

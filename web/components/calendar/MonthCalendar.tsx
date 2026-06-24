@@ -26,6 +26,7 @@ interface MonthCalendarProps {
   onMonthChange: (year: number, month: number) => void;
   onDateSelect: (date: string) => void;
   mode?: "book" | "admin";
+  size?: "default" | "large";
 }
 
 const STATUS_STYLES: Record<
@@ -69,6 +70,7 @@ export function MonthCalendar({
   onMonthChange,
   onDateSelect,
   mode = "book",
+  size = "default",
 }: MonthCalendarProps) {
   const { startWeekday } = getMonthBounds(year, month);
 
@@ -91,17 +93,25 @@ export function MonthCalendar({
   };
 
   return (
-    <div className="rounded-2xl border border-slate/10 bg-white p-4 shadow-sm sm:p-6">
-      <div className="mb-4 flex items-center justify-between">
+    <div
+      className={`rounded-2xl border border-slate/10 bg-white shadow-sm ${
+        size === "large" ? "p-5 sm:p-8" : "p-4 sm:p-6"
+      }`}
+    >
+      <div className="mb-4 flex items-center justify-between sm:mb-6">
         <button
           type="button"
           onClick={prev}
           className="rounded-lg p-2 text-forest hover:bg-mint"
           aria-label="Previous month"
         >
-          <ChevronLeft size={22} />
+          <ChevronLeft size={size === "large" ? 26 : 22} />
         </button>
-        <h3 className="font-display text-xl font-bold text-forest">
+        <h3
+          className={`font-display font-bold text-forest ${
+            size === "large" ? "text-2xl sm:text-3xl" : "text-xl"
+          }`}
+        >
           {formatMonthYear(year, month)}
         </h3>
         <button
@@ -110,25 +120,40 @@ export function MonthCalendar({
           className="rounded-lg p-2 text-forest hover:bg-mint"
           aria-label="Next month"
         >
-          <ChevronRight size={22} />
+          <ChevronRight size={size === "large" ? 26 : 22} />
         </button>
       </div>
 
-      <div className="mb-2 grid grid-cols-7 gap-1">
+      <div
+        className={`mb-2 grid grid-cols-7 ${
+          size === "large" ? "gap-1.5 sm:gap-2" : "gap-1"
+        }`}
+      >
         {WEEKDAYS.map((d) => (
           <div
             key={d}
-            className="py-2 text-center text-xs font-semibold uppercase tracking-wider text-slate/50"
+            className={`py-2 text-center font-semibold uppercase tracking-wider text-slate/50 ${
+              size === "large" ? "text-sm" : "text-xs"
+            }`}
           >
             {d}
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-7 gap-1.5">
+      <div
+        className={`grid grid-cols-7 ${
+          size === "large" ? "gap-2 sm:gap-3" : "gap-1.5"
+        }`}
+      >
         {grid.map((cell, i) => {
           if (!cell) {
-            return <div key={`empty-${i}`} className="aspect-square" />;
+            return (
+              <div
+                key={`empty-${i}`}
+                className={size === "large" ? "min-h-[3.5rem] sm:aspect-square" : "aspect-square"}
+              />
+            );
           }
 
           const status = cell.status ?? "unavailable";
@@ -145,9 +170,13 @@ export function MonthCalendar({
               type="button"
               disabled={!clickable}
               onClick={() => clickable && onDateSelect(cell.date)}
-              className={`relative flex aspect-square flex-col items-center justify-center rounded-xl border text-sm font-semibold transition-all ${styles.cell} ${
+              className={`relative flex flex-col items-center justify-center rounded-xl border font-semibold transition-all ${styles.cell} ${
+                size === "large"
+                  ? "min-h-[3.5rem] text-base sm:aspect-square sm:min-h-0 sm:text-lg"
+                  : "aspect-square text-sm"
+              } ${
                 isSelected
-                  ? "ring-2 ring-teal ring-offset-2 scale-[1.02]"
+                  ? "scale-[1.02] ring-2 ring-teal ring-offset-2"
                   : ""
               } ${!cell.inMonth ? "opacity-30" : ""}`}
             >
@@ -159,7 +188,13 @@ export function MonthCalendar({
                 />
               ) : null}
               {mode === "admin" && cell.bookingCount ? (
-                <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-teal px-1 text-[10px] font-bold text-white">
+                <span
+                  className={`absolute -right-0.5 -top-0.5 flex items-center justify-center rounded-full bg-teal font-bold text-white ${
+                    size === "large"
+                      ? "h-6 min-w-6 px-1.5 text-xs"
+                      : "h-5 min-w-5 px-1 text-[10px]"
+                  }`}
+                >
                   {cell.bookingCount}
                 </span>
               ) : null}

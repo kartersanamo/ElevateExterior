@@ -25,6 +25,7 @@ export default auth((req) => {
 
   const isAdmin = pathname.startsWith("/admin");
   const isLogin = pathname === "/login";
+  const mustChangePassword = Boolean(session?.user?.mustChangePassword);
 
   if (isAdmin && !isLoggedIn) {
     const login = new URL("/login", req.nextUrl.origin);
@@ -32,7 +33,14 @@ export default auth((req) => {
     return NextResponse.redirect(login);
   }
 
+  if (isLoggedIn && isAdmin && mustChangePassword && pathname !== "/admin/account") {
+    return NextResponse.redirect(new URL("/admin/account", req.nextUrl.origin));
+  }
+
   if (isLoggedIn && isLogin) {
+    if (mustChangePassword) {
+      return NextResponse.redirect(new URL("/admin/account", req.nextUrl.origin));
+    }
     const callbackUrl = req.nextUrl.searchParams.get("callbackUrl");
     if (callbackUrl?.startsWith("/admin")) {
       return NextResponse.redirect(new URL(callbackUrl, req.nextUrl.origin));

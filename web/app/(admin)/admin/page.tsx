@@ -86,10 +86,10 @@ export default async function AdminDashboardPage() {
 
       <p className="mt-6">
         <Link
-          href="/admin/calendar"
+          href="/admin/bookings"
           className="text-sm font-semibold text-teal hover:underline"
         >
-          View full calendar →
+          View bookings calendar →
         </Link>
       </p>
 

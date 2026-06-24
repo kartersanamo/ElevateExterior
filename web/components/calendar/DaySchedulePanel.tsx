@@ -14,6 +14,7 @@ interface DaySchedulePanelProps {
   onBlockSlot?: (slot: { startTime: string; endTime: string }) => void;
   onUnblockSlot?: (blockId: string) => void;
   pending?: boolean;
+  stacked?: boolean;
 }
 
 const STATE_CONFIG = {
@@ -55,10 +56,15 @@ export function DaySchedulePanel({
   onBlockSlot,
   onUnblockSlot,
   pending,
+  stacked = false,
 }: DaySchedulePanelProps) {
   if (!date) {
     return (
-      <div className="flex h-full min-h-[280px] flex-col items-center justify-center rounded-2xl border border-dashed border-slate/20 bg-cream/50 p-8 text-center text-slate/50">
+      <div
+        className={`flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate/20 bg-cream/50 p-8 text-center text-slate/50 ${
+          stacked ? "min-h-[140px]" : "min-h-[280px] h-full"
+        }`}
+      >
         <Calendar className="mb-3 h-10 w-10 opacity-40" />
         <p>Select a date on the calendar</p>
       </div>
@@ -83,7 +89,13 @@ export function DaySchedulePanel({
       ) : slots.length === 0 ? (
         <p className="mt-6 text-sm text-slate/50">No time slots this day.</p>
       ) : (
-        <ul className="mt-4 space-y-2">
+        <ul
+          className={
+            stacked
+              ? "mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+              : "mt-4 space-y-2"
+          }
+        >
           {slots.map((slot) => {
             const config = STATE_CONFIG[slot.state];
             const Icon = config.icon;

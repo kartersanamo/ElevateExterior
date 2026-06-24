@@ -9,6 +9,7 @@ export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") ?? "/admin";
+  const passwordUpdated = searchParams.get("passwordUpdated") === "1";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -43,6 +44,12 @@ export default function LoginPage() {
           {site.shortName} Admin
         </h1>
         <p className="mt-2 text-sm text-slate/60">Sign in to manage bookings.</p>
+
+        {passwordUpdated ? (
+          <p className="mt-4 rounded-lg bg-mint px-4 py-2 text-sm text-forest">
+            Password updated. Sign in with your new password.
+          </p>
+        ) : null}
 
         <form onSubmit={onSubmit} className="mt-8 space-y-4">
           <div>

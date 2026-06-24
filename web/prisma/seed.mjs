@@ -145,8 +145,13 @@ async function main() {
       const name = email.split("@")[0] ?? "Admin";
       await db.adminUser.upsert({
         where: { email },
-        create: { email, name, passwordHash },
-        update: { passwordHash },
+        create: {
+          email,
+          name,
+          passwordHash,
+          mustChangePassword: true,
+        },
+        update: {},
       });
       console.log(`Admin user seeded: ${email}`);
     }

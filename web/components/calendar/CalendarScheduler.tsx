@@ -137,53 +137,51 @@ export function CalendarScheduler({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {message ? (
         <p className="rounded-lg bg-mint px-4 py-2 text-sm text-forest">{message}</p>
       ) : null}
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <div className={loadingMonth ? "opacity-60" : ""}>
-          <MonthCalendar
-            year={year}
-            month={month}
-            days={days}
-            selectedDate={selectedDate}
-            onMonthChange={handleMonthChange}
-            onDateSelect={handleDateSelect}
-            mode={mode}
-          />
-        </div>
-
-        <div className="space-y-4">
-          {mode === "admin" && selectedDate ? (
-            <div className="rounded-xl border border-slate/10 bg-cream p-4">
-              <label className="block text-sm font-semibold text-forest">
-                Reason for blocking (optional)
-              </label>
-              <input
-                type="text"
-                value={blockReason}
-                onChange={(e) => setBlockReason(e.target.value)}
-                placeholder="Dentist appointment, personal errand…"
-                className="mt-2 w-full rounded-lg border border-slate/20 px-3 py-2 text-sm"
-              />
-            </div>
-          ) : null}
-
-          <DaySchedulePanel
-            date={selectedDate}
-            slots={schedule}
-            loading={loadingDay}
-            mode={mode}
-            selectedSlot={selectedSlot}
-            onSelectSlot={handleSelectSlot}
-            onBlockSlot={handleBlock}
-            onUnblockSlot={handleUnblock}
-            pending={pending}
-          />
-        </div>
+      <div className={loadingMonth ? "opacity-60" : ""}>
+        <MonthCalendar
+          year={year}
+          month={month}
+          days={days}
+          selectedDate={selectedDate}
+          onMonthChange={handleMonthChange}
+          onDateSelect={handleDateSelect}
+          mode={mode}
+          size={mode === "admin" ? "large" : "default"}
+        />
       </div>
+
+      {mode === "admin" && selectedDate ? (
+        <div className="rounded-xl border border-slate/10 bg-cream p-4">
+          <label className="block text-sm font-semibold text-forest">
+            Reason for blocking (optional)
+          </label>
+          <input
+            type="text"
+            value={blockReason}
+            onChange={(e) => setBlockReason(e.target.value)}
+            placeholder="Dentist appointment, personal errand…"
+            className="mt-2 w-full rounded-lg border border-slate/20 px-3 py-2 text-sm"
+          />
+        </div>
+      ) : null}
+
+      <DaySchedulePanel
+        date={selectedDate}
+        slots={schedule}
+        loading={loadingDay}
+        mode={mode}
+        selectedSlot={selectedSlot}
+        onSelectSlot={handleSelectSlot}
+        onBlockSlot={handleBlock}
+        onUnblockSlot={handleUnblock}
+        pending={pending}
+        stacked
+      />
     </div>
   );
 }
