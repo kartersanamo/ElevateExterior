@@ -1,0 +1,9 @@
+{
+  "name": "Elevate Exterior Cleaning",
+  "short_name": "Elevate",
+  "description": "Professional pressure washing and soft washing in Greater Houston",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a3a2f",
+  "theme_color": "#14b8a6"
+}
