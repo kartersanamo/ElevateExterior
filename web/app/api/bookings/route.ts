@@ -1,5 +1,7 @@
 import { sendBookingSubmittedEmails } from "@/lib/booking-mail";
+import { upsertCustomer } from "@/lib/customers";
 import { db } from "@/lib/db";
+import { runAutomationForBooking } from "@/lib/email/send";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getClientIpFromRequest } from "@/lib/request-ip";
 import {
@@ -69,9 +71,27 @@ export async function POST(request: NextRequest) {
     });
 
     try {
+      await upsertCustomer({
+        email: data.customerEmail,
+        name: data.customerName,
+        phone: data.customerPhone,
+        address: data.address,
+        source: "booking",
+      });
+    } catch (error) {
+      console.error("Customer upsert error:", error);
+    }
+
+    try {
       await sendBookingSubmittedEmails(bookingToEmailPayload(booking));
     } catch (error) {
       console.error("Booking email error:", error);
+    }
+
+    try {
+      await runAutomationForBooking("ON_BOOKING_REQUESTED", booking);
+    } catch (error) {
+      console.error("Booking automation error:", error);
     }
 
     return NextResponse.json({ ok: true, id: booking.id });

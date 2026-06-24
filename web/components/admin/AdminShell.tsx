@@ -1,12 +1,25 @@
 import Link from "next/link";
 import { signOut } from "@/lib/auth";
 import { site } from "@/lib/site-config";
-import { CalendarDays, Clock, ClipboardList, LayoutDashboard, LogOut, Users } from "lucide-react";
+import {
+  CalendarDays,
+  Clock,
+  ClipboardList,
+  ImageIcon,
+  LayoutDashboard,
+  LogOut,
+  Mail,
+  Users,
+  UserCircle,
+} from "lucide-react";
 
 const links = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/calendar", label: "Calendar", icon: CalendarDays },
   { href: "/admin/bookings", label: "Bookings", icon: ClipboardList },
+  { href: "/admin/customers", label: "Customers", icon: UserCircle },
+  { href: "/admin/gallery", label: "Gallery", icon: ImageIcon },
+  { href: "/admin/emails", label: "Emails", icon: Mail },
   { href: "/admin/availability", label: "Availability", icon: Clock },
   { href: "/admin/team", label: "Team", icon: Users },
 ];

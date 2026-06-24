@@ -2,10 +2,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { AnimateIn } from "@/components/ui/AnimateIn";
 import { SectionHeading } from "@/components/ui/SectionHeading";
-import { galleryImages } from "@/lib/site-config";
+import { getPublishedGalleryImages } from "@/lib/gallery";
 
-export function GalleryTeaser() {
-  const preview = galleryImages.slice(0, 3);
+export async function GalleryTeaser() {
+  const images = await getPublishedGalleryImages();
+  const preview = images.slice(0, 3);
 
   return (
     <section className="section-padding bg-white">
@@ -13,11 +14,11 @@ export function GalleryTeaser() {
         <SectionHeading
           eyebrow="Results"
           title="See what's possible."
-          subtitle="Real transformations — swap in your own job photos anytime."
+          subtitle="Real transformations from our recent work."
         />
         <div className="grid gap-4 md:grid-cols-3">
           {preview.map((img, i) => (
-            <AnimateIn key={img.src} delay={i * 0.08}>
+            <AnimateIn key={img.id} delay={i * 0.08}>
               <Link
                 href="/gallery"
                 className="group relative block aspect-[4/3] overflow-hidden rounded-2xl"

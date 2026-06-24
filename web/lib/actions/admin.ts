@@ -4,7 +4,9 @@ import {
   sendBookingCancelledEmail,
   sendBookingConfirmedEmail,
 } from "@/lib/booking-mail";
+import { upsertCustomer } from "@/lib/customers";
 import { db } from "@/lib/db";
+import { runAutomationForBooking } from "@/lib/email/send";
 import { auth } from "@/lib/auth";
 import { bookingToEmailPayload } from "@/lib/scheduling/slots";
 import type { BookingStatus } from "@prisma/client";
@@ -29,11 +31,24 @@ export async function updateBookingStatus(
     data: { status },
   });
 
+  try {
+    await upsertCustomer({
+      email: booking.customerEmail,
+      name: booking.customerName,
+      phone: booking.customerPhone,
+      address: booking.address,
+      source: "booking",
+    });
+  } catch (error) {
+    console.error("Customer upsert error:", error);
+  }
+
   const payload = bookingToEmailPayload(booking);
 
   try {
     if (status === "CONFIRMED") {
       await sendBookingConfirmedEmail(payload);
+      await runAutomationForBooking("ON_BOOKING_CONFIRMED", booking);
     } else if (status === "CANCELLED") {
       await sendBookingCancelledEmail(payload);
     }

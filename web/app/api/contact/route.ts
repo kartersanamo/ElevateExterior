@@ -1,3 +1,4 @@
+import { upsertCustomer } from "@/lib/customers";
 import { sendContactFormEmail } from "@/lib/contact-mail";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getClientIpFromRequest } from "@/lib/request-ip";
@@ -36,6 +37,17 @@ export async function POST(request: NextRequest) {
         { error: "Too many requests. Please try again later." },
         { status: 429 }
       );
+    }
+
+    try {
+      await upsertCustomer({
+        email,
+        name: `${firstName} ${lastName}`.trim(),
+        phone,
+        source: "contact",
+      });
+    } catch (error) {
+      console.error("Customer upsert error:", error);
     }
 
     try {
