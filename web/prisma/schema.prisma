@@ -14,6 +14,21 @@ enum BookingStatus {
   COMPLETED
 }
 
+enum QuoteStatus {
+  PENDING
+  QUOTED
+  ACCEPTED
+  DECLINED
+}
+
+enum RecurringFrequency {
+  MONTHLY
+  EVERY_2_MONTHS
+  EVERY_3_MONTHS
+  EVERY_6_MONTHS
+  YEARLY
+}
+
 enum EmailTrigger {
   MANUAL
   DAYS_BEFORE_APPOINTMENT
@@ -64,22 +79,96 @@ model BlockedTimeSlot {
 }
 
 model Booking {
-  id            String        @id @default(cuid())
-  status        BookingStatus @default(PENDING)
-  customerName  String
-  customerEmail String
-  customerPhone String
-  address       String
-  services      String
-  notes         String?
-  scheduledDate DateTime
-  startTime     String
-  endTime       String
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  id                      String        @id @default(cuid())
+  status                  BookingStatus @default(PENDING)
+  customerName            String
+  customerEmail           String
+  customerPhone           String
+  address                 String
+  services                String
+  notes                   String?
+  scheduledDate           DateTime
+  startTime               String
+  endTime                 String
+  publicToken             String?       @unique
+  amountChargedCents      Int?
+  completedAt             DateTime?
+  paidAt                  DateTime?
+  stripeCheckoutSessionId String?
+  invoiceNumber           String?
+  invoiceHtml             String?
+  createdAt               DateTime      @default(now())
+  updatedAt               DateTime      @updatedAt
+
+  photos           JobPhoto[]
+  recurringService RecurringService?
+  quoteRequest     QuoteRequest?
 
   @@index([scheduledDate, status])
   @@index([customerEmail])
+  @@index([publicToken])
+}
+
+model JobPhoto {
+  id        String   @id @default(cuid())
+  bookingId String
+  filename  String
+  mimeType  String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId])
+}
+
+model QuoteRequest {
+  id                  String      @id @default(cuid())
+  publicToken         String      @unique @default(cuid())
+  status              QuoteStatus @default(PENDING)
+  customerName        String
+  customerEmail       String
+  customerPhone       String?
+  address             String?
+  services            String      @default("[]")
+  message             String
+  quotedAmountCents   Int?
+  quoteNotes          String?
+  proposedDate        DateTime?
+  proposedStartTime   String?
+  proposedEndTime     String?
+  bookingId           String?     @unique
+  quotedAt            DateTime?
+  respondedAt         DateTime?
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+
+  booking Booking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([customerEmail])
+}
+
+model RecurringService {
+  id              String             @id @default(cuid())
+  customerEmail   String
+  customerName    String
+  customerPhone   String?
+  address         String
+  services        String
+  frequency       RecurringFrequency
+  active          Boolean            @default(true)
+  sourceBookingId String?            @unique
+  nextServiceDate DateTime?
+  lastServiceDate DateTime?
+  notes           String?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  sourceBooking Booking? @relation(fields: [sourceBookingId], references: [id], onDelete: SetNull)
+
+  @@index([customerEmail])
+  @@index([active, nextServiceDate])
 }
 
 model Customer {

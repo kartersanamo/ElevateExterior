@@ -26,6 +26,10 @@ export async function updateBookingStatus(
 ) {
   await requireAdmin();
 
+  if (status === "COMPLETED") {
+    throw new Error("Use the complete job flow to mark bookings complete.");
+  }
+
   const booking = await db.booking.update({
     where: { id: bookingId },
     data: { status },

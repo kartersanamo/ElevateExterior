@@ -1,5 +1,7 @@
 import { upsertCustomer } from "@/lib/customers";
+import { db } from "@/lib/db";
 import { sendContactFormEmail } from "@/lib/contact-mail";
+import { sendQuoteRequestNotification } from "@/lib/quote-mail";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getClientIpFromRequest } from "@/lib/request-ip";
 import { contactSchema } from "@/lib/validators/contact";
@@ -48,6 +50,22 @@ export async function POST(request: NextRequest) {
       });
     } catch (error) {
       console.error("Customer upsert error:", error);
+    }
+
+    const fullName = `${firstName} ${lastName}`.trim();
+    try {
+      const quote = await db.quoteRequest.create({
+        data: {
+          customerName: fullName,
+          customerEmail: email.toLowerCase(),
+          customerPhone: phone || null,
+          message,
+          status: "PENDING",
+        },
+      });
+      await sendQuoteRequestNotification(quote);
+    } catch (error) {
+      console.error("Quote request error:", error);
     }
 
     try {

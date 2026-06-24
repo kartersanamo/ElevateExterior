@@ -1,8 +1,9 @@
 "use client";
 
-import { updateBookingStatus } from "@/lib/actions/admin";
+import Link from "next/link";
 import type { BookingStatus } from "@prisma/client";
 import { useTransition } from "react";
+import { updateBookingStatus } from "@/lib/actions/admin";
 
 export function BookingActions({
   bookingId,
@@ -43,14 +44,12 @@ export function BookingActions({
       ) : null}
       {status === "CONFIRMED" ? (
         <>
-          <button
-            type="button"
-            disabled={pending}
-            onClick={() => act("COMPLETED")}
-            className="rounded-lg bg-forest px-4 py-2 text-sm font-semibold text-white hover:bg-forest-light disabled:opacity-50"
+          <Link
+            href={`/admin/bookings/${bookingId}/complete`}
+            className="rounded-lg bg-forest px-4 py-2 text-sm font-semibold text-white hover:bg-forest-light"
           >
-            Mark complete
-          </button>
+            Complete job…
+          </Link>
           <button
             type="button"
             disabled={pending}
@@ -60,6 +59,14 @@ export function BookingActions({
             Cancel
           </button>
         </>
+      ) : null}
+      {status === "COMPLETED" ? (
+        <Link
+          href={`/admin/jobs/${bookingId}`}
+          className="rounded-lg border border-slate/20 px-4 py-2 text-sm font-semibold text-teal hover:bg-teal/5"
+        >
+          View job
+        </Link>
       ) : null}
     </div>
   );

@@ -24,7 +24,7 @@ export default async function AdminDashboardPage() {
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
 
-  const [pendingCount, todayBookings, recentPending] = await Promise.all([
+  const [pendingCount, todayBookings, recentPending, pendingQuotes] = await Promise.all([
     db.booking.count({ where: { status: "PENDING" } }),
     db.booking.findMany({
       where: {
@@ -38,13 +38,14 @@ export default async function AdminDashboardPage() {
       orderBy: { createdAt: "desc" },
       take: 5,
     }),
+    db.quoteRequest.count({ where: { status: "PENDING" } }),
   ]);
 
   return (
     <div>
       <h1 className="font-display text-3xl font-bold text-forest">Dashboard</h1>
 
-      <div className="mt-8 grid gap-4 sm:grid-cols-2">
+      <div className="mt-8 grid gap-4 sm:grid-cols-3">
         <div className="rounded-2xl border border-slate/10 bg-white p-6">
           <p className="text-sm text-slate/60">Pending requests</p>
           <p className="mt-1 font-display text-4xl font-bold text-teal">
@@ -55,6 +56,18 @@ export default async function AdminDashboardPage() {
             className="mt-3 inline-block text-sm font-semibold text-teal hover:underline"
           >
             Review pending →
+          </Link>
+        </div>
+        <div className="rounded-2xl border border-slate/10 bg-white p-6">
+          <p className="text-sm text-slate/60">Quote requests</p>
+          <p className="mt-1 font-display text-4xl font-bold text-amber-600">
+            {pendingQuotes}
+          </p>
+          <Link
+            href="/admin/quotes"
+            className="mt-3 inline-block text-sm font-semibold text-teal hover:underline"
+          >
+            Send quotes →
           </Link>
         </div>
         <div className="rounded-2xl border border-slate/10 bg-white p-6">
