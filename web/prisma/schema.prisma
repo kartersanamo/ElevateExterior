@@ -14,6 +14,19 @@ enum BookingStatus {
   COMPLETED
 }
 
+enum EmailTrigger {
+  MANUAL
+  DAYS_BEFORE_APPOINTMENT
+  DAYS_AFTER_APPOINTMENT
+  ON_BOOKING_REQUESTED
+  ON_BOOKING_CONFIRMED
+}
+
+enum EmailAudience {
+  ALL_CUSTOMERS
+  EMAIL_LIST
+}
+
 model AdminUser {
   id           String   @id @default(cuid())
   email        String   @unique
@@ -39,6 +52,17 @@ model BlockedDate {
   reason String?
 }
 
+model BlockedTimeSlot {
+  id        String   @id @default(cuid())
+  date      DateTime
+  startTime String
+  endTime   String
+  reason    String?
+  createdAt DateTime @default(now())
+
+  @@index([date])
+}
+
 model Booking {
   id            String        @id @default(cuid())
   status        BookingStatus @default(PENDING)
@@ -55,6 +79,100 @@ model Booking {
   updatedAt     DateTime      @updatedAt
 
   @@index([scheduledDate, status])
+  @@index([customerEmail])
+}
+
+model Customer {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  phone     String?
+  address   String?
+  source    String   @default("booking")
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model GalleryImage {
+  id        String   @id @default(cuid())
+  src       String
+  alt       String
+  category  String
+  sortOrder Int      @default(0)
+  published Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model EmailTemplate {
+  id        String   @id @default(cuid())
+  name      String
+  subject   String
+  bodyHtml  String
+  bodyText  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  automations EmailAutomation[]
+}
+
+model EmailList {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members     EmailListMember[]
+  automations EmailAutomation[]
+}
+
+model EmailListMember {
+  id        String   @id @default(cuid())
+  listId    String
+  email     String
+  name      String?
+  createdAt DateTime @default(now())
+
+  list EmailList @relation(fields: [listId], references: [id], onDelete: Cascade)
+
+  @@unique([listId, email])
+  @@index([email])
+}
+
+model EmailAutomation {
+  id         String        @id @default(cuid())
+  name       String
+  enabled    Boolean       @default(true)
+  trigger    EmailTrigger
+  daysOffset Int?
+  audience   EmailAudience @default(ALL_CUSTOMERS)
+  templateId String
+  listId     String?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  template EmailTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  list     EmailList?    @relation(fields: [listId], references: [id], onDelete: SetNull)
+  sendLogs EmailSendLog[]
+}
+
+model EmailSendLog {
+  id             String   @id @default(cuid())
+  recipientEmail String
+  subject        String
+  templateId     String?
+  automationId   String?
+  bookingId      String?
+  manual         Boolean  @default(false)
+  sentAt         DateTime @default(now())
+
+  automation EmailAutomation? @relation(fields: [automationId], references: [id], onDelete: SetNull)
+
+  @@unique([automationId, bookingId, recipientEmail])
+  @@index([recipientEmail])
+  @@index([sentAt])
 }
 
 model SiteSettings {

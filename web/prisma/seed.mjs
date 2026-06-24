@@ -15,6 +15,15 @@ const DEFAULT_RULES = [
   { dayOfWeek: 0, startTime: "09:00", endTime: "14:00", enabled: false },
 ];
 
+function parseAdminEmails() {
+  const raw =
+    process.env.ADMIN_EMAILS?.trim() || process.env.ADMIN_EMAIL?.trim() || "";
+  return raw
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+}
+
 async function main() {
   await db.siteSettings.upsert({
     where: { id: "default" },
@@ -30,17 +39,24 @@ async function main() {
     });
   }
 
-  const email = process.env.ADMIN_EMAIL?.trim().toLowerCase();
+  const emails = parseAdminEmails();
   const password = process.env.ADMIN_PASSWORD;
 
-  if (email && password) {
+  if (emails.length > 0 && password) {
     const passwordHash = await bcrypt.hash(password, 12);
-    await db.adminUser.upsert({
-      where: { email },
-      create: { email, name: "Admin", passwordHash },
-      update: { passwordHash },
-    });
-    console.log(`Admin user seeded: ${email}`);
+    for (const email of emails) {
+      const name = email.split("@")[0] ?? "Admin";
+      await db.adminUser.upsert({
+        where: { email },
+        create: { email, name, passwordHash },
+        update: { passwordHash },
+      });
+      console.log(`Admin user seeded: ${email}`);
+    }
+  } else {
+    console.warn(
+      "ADMIN_EMAILS (or ADMIN_EMAIL) and ADMIN_PASSWORD not set — skipping admin seed."
+    );
   }
 }
 

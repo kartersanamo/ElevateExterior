@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { signOut } from "@/lib/auth";
 import { site } from "@/lib/site-config";
-import { Calendar, Clock, LayoutDashboard, LogOut } from "lucide-react";
+import { CalendarDays, Clock, ClipboardList, LayoutDashboard, LogOut, Users } from "lucide-react";
 
 const links = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/admin/bookings", label: "Bookings", icon: Calendar },
+  { href: "/admin/calendar", label: "Calendar", icon: CalendarDays },
+  { href: "/admin/bookings", label: "Bookings", icon: ClipboardList },
   { href: "/admin/availability", label: "Availability", icon: Clock },
+  { href: "/admin/team", label: "Team", icon: Users },
 ];
 
 export function AdminShell({ children }: { children: React.ReactNode }) {

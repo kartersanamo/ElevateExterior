@@ -1,29 +1,31 @@
 import { db } from "@/lib/db";
 import { site } from "@/lib/site-config";
+import {
+  getMonthBounds,
+  minutesToTime,
+  parseDateOnly,
+  parseTimeToMinutes,
+  rangesOverlap,
+  toDateOnly,
+} from "@/lib/scheduling/dates";
 
 export interface TimeSlot {
   startTime: string;
   endTime: string;
 }
 
-function parseTimeToMinutes(time: string): number {
-  const [h, m] = time.split(":").map(Number);
-  return h * 60 + m;
-}
+export type DayAvailabilityStatus =
+  | "unavailable"
+  | "blocked"
+  | "full"
+  | "limited"
+  | "open";
 
-function minutesToTime(minutes: number): string {
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-}
-
-function toDateOnly(date: Date): string {
-  return date.toISOString().slice(0, 10);
-}
-
-function parseDateOnly(dateStr: string): Date {
-  const [y, m, d] = dateStr.split("-").map(Number);
-  return new Date(Date.UTC(y, m - 1, d));
+export interface DaySummary {
+  date: string;
+  status: DayAvailabilityStatus;
+  slotCount: number;
+  bookingCount: number;
 }
 
 export async function getSlotDurationMinutes(): Promise<number> {
@@ -33,60 +35,35 @@ export async function getSlotDurationMinutes(): Promise<number> {
   return settings?.slotDurationMinutes ?? site.slotDurationMinutes;
 }
 
-export async function getAvailableDates(
-  fromDate: string,
-  toDate: string
-): Promise<string[]> {
-  const start = parseDateOnly(fromDate);
-  const end = parseDateOnly(toDate);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+async function getBlockedRangesForDate(dateStr: string) {
+  const dayStart = parseDateOnly(dateStr);
+  const dayEnd = new Date(dayStart);
+  dayEnd.setUTCDate(dayEnd.getUTCDate() + 1);
 
-  const minDate = new Date(today);
-  minDate.setDate(minDate.getDate() + site.bookingLeadDays);
+  const [bookings, blockedSlots] = await Promise.all([
+    db.booking.findMany({
+      where: {
+        scheduledDate: { gte: dayStart, lt: dayEnd },
+        status: { in: ["PENDING", "CONFIRMED"] },
+      },
+    }),
+    db.blockedTimeSlot.findMany({
+      where: { date: dayStart },
+    }),
+  ]);
 
-  const maxDate = new Date(today);
-  maxDate.setDate(maxDate.getDate() + site.bookingHorizonDays);
-
-  const rules = await db.availabilityRule.findMany({ where: { enabled: true } });
-  const blocked = await db.blockedDate.findMany();
-  const blockedSet = new Set(blocked.map((b) => toDateOnly(b.date)));
-
-  const available: string[] = [];
-  const cursor = new Date(start);
-
-  while (cursor <= end) {
-    const dateStr = toDateOnly(cursor);
-    const local = new Date(
-      cursor.getUTCFullYear(),
-      cursor.getUTCMonth(),
-      cursor.getUTCDate()
-    );
-
-    if (local < minDate || local > maxDate) {
-      cursor.setUTCDate(cursor.getUTCDate() + 1);
-      continue;
-    }
-
-    if (blockedSet.has(dateStr)) {
-      cursor.setUTCDate(cursor.getUTCDate() + 1);
-      continue;
-    }
-
-    const dayOfWeek = local.getDay();
-    const rule = rules.find((r) => r.dayOfWeek === dayOfWeek);
-
-    if (rule) {
-      const slots = await getSlotsForDate(dateStr);
-      if (slots.length > 0) {
-        available.push(dateStr);
-      }
-    }
-
-    cursor.setUTCDate(cursor.getUTCDate() + 1);
-  }
-
-  return available;
+  return [
+    ...bookings.map((b) => ({
+      start: parseTimeToMinutes(b.startTime),
+      end: parseTimeToMinutes(b.endTime),
+      kind: "booking" as const,
+    })),
+    ...blockedSlots.map((b) => ({
+      start: parseTimeToMinutes(b.startTime),
+      end: parseTimeToMinutes(b.endTime),
+      kind: "block" as const,
+    })),
+  ];
 }
 
 export async function getSlotsForDate(dateStr: string): Promise<TimeSlot[]> {
@@ -112,25 +89,7 @@ export async function getSlotsForDate(dateStr: string): Promise<TimeSlot[]> {
   const duration = await getSlotDurationMinutes();
   const windowStart = parseTimeToMinutes(rule.startTime);
   const windowEnd = parseTimeToMinutes(rule.endTime);
-
-  const dayStart = parseDateOnly(dateStr);
-  const dayEnd = new Date(dayStart);
-  dayEnd.setUTCDate(dayEnd.getUTCDate() + 1);
-
-  const bookings = await db.booking.findMany({
-    where: {
-      scheduledDate: {
-        gte: dayStart,
-        lt: dayEnd,
-      },
-      status: { in: ["PENDING", "CONFIRMED"] },
-    },
-  });
-
-  const bookedRanges = bookings.map((b) => ({
-    start: parseTimeToMinutes(b.startTime),
-    end: parseTimeToMinutes(b.endTime),
-  }));
+  const occupied = await getBlockedRangesForDate(dateStr);
 
   const slots: TimeSlot[] = [];
 
@@ -140,8 +99,8 @@ export async function getSlotsForDate(dateStr: string): Promise<TimeSlot[]> {
     start += duration
   ) {
     const end = start + duration;
-    const overlaps = bookedRanges.some(
-      (b) => start < b.end && end > b.start
+    const overlaps = occupied.some((r) =>
+      rangesOverlap(start, end, r.start, r.end)
     );
     if (!overlaps) {
       slots.push({
@@ -152,6 +111,201 @@ export async function getSlotsForDate(dateStr: string): Promise<TimeSlot[]> {
   }
 
   return slots;
+}
+
+export async function getDaySummary(dateStr: string): Promise<DaySummary> {
+  const date = parseDateOnly(dateStr);
+  const local = new Date(
+    date.getUTCFullYear(),
+    date.getUTCMonth(),
+    date.getUTCDate()
+  );
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const minDate = new Date(today);
+  minDate.setDate(minDate.getDate() + site.bookingLeadDays);
+  const maxDate = new Date(today);
+  maxDate.setDate(maxDate.getDate() + site.bookingHorizonDays);
+
+  if (local < minDate || local > maxDate) {
+    return { date: dateStr, status: "unavailable", slotCount: 0, bookingCount: 0 };
+  }
+
+  const blockedDate = await db.blockedDate.findUnique({
+    where: { date: parseDateOnly(dateStr) },
+  });
+  if (blockedDate) {
+    return { date: dateStr, status: "blocked", slotCount: 0, bookingCount: 0 };
+  }
+
+  const dayStart = parseDateOnly(dateStr);
+  const dayEnd = new Date(dayStart);
+  dayEnd.setUTCDate(dayEnd.getUTCDate() + 1);
+
+  const bookingCount = await db.booking.count({
+    where: {
+      scheduledDate: { gte: dayStart, lt: dayEnd },
+      status: { in: ["PENDING", "CONFIRMED"] },
+    },
+  });
+
+  const slots = await getSlotsForDate(dateStr);
+  const slotCount = slots.length;
+
+  let status: DayAvailabilityStatus = "unavailable";
+  if (slotCount > 2) status = "open";
+  else if (slotCount > 0) status = "limited";
+  else if (bookingCount > 0) status = "full";
+  else status = "unavailable";
+
+  return { date: dateStr, status, slotCount, bookingCount };
+}
+
+export async function getAvailableDates(
+  fromDate: string,
+  toDate: string
+): Promise<string[]> {
+  const start = parseDateOnly(fromDate);
+  const end = parseDateOnly(toDate);
+  const available: string[] = [];
+  const cursor = new Date(start);
+
+  while (cursor <= end) {
+    const dateStr = toDateOnly(cursor);
+    const summary = await getDaySummary(dateStr);
+    if (summary.slotCount > 0) {
+      available.push(dateStr);
+    }
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+
+  return available;
+}
+
+export async function getMonthSummaries(
+  year: number,
+  month: number
+): Promise<DaySummary[]> {
+  const { daysInMonth } = getMonthBounds(year, month);
+  const summaries: DaySummary[] = [];
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dateStr = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    summaries.push(await getDaySummary(dateStr));
+  }
+
+  return summaries;
+}
+
+export interface DayScheduleSlot {
+  startTime: string;
+  endTime: string;
+  state: "available" | "booked" | "blocked" | "past";
+  bookingId?: string;
+  customerName?: string;
+  blockId?: string;
+  reason?: string | null;
+}
+
+export async function getDaySchedule(dateStr: string): Promise<DayScheduleSlot[]> {
+  const date = parseDateOnly(dateStr);
+  const local = new Date(
+    date.getUTCFullYear(),
+    date.getUTCMonth(),
+    date.getUTCDate()
+  );
+  const dayOfWeek = local.getDay();
+
+  const rule = await db.availabilityRule.findFirst({
+    where: { dayOfWeek, enabled: true },
+  });
+  if (!rule) return [];
+
+  const blockedDate = await db.blockedDate.findUnique({
+    where: { date: parseDateOnly(dateStr) },
+  });
+  if (blockedDate) return [];
+
+  const duration = await getSlotDurationMinutes();
+  const windowStart = parseTimeToMinutes(rule.startTime);
+  const windowEnd = parseTimeToMinutes(rule.endTime);
+
+  const dayStart = parseDateOnly(dateStr);
+  const dayEnd = new Date(dayStart);
+  dayEnd.setUTCDate(dayEnd.getUTCDate() + 1);
+
+  const [bookings, blockedSlots] = await Promise.all([
+    db.booking.findMany({
+      where: {
+        scheduledDate: { gte: dayStart, lt: dayEnd },
+        status: { in: ["PENDING", "CONFIRMED", "COMPLETED"] },
+      },
+      orderBy: { startTime: "asc" },
+    }),
+    db.blockedTimeSlot.findMany({
+      where: { date: dayStart },
+      orderBy: { startTime: "asc" },
+    }),
+  ]);
+
+  const schedule: DayScheduleSlot[] = [];
+
+  for (
+    let start = windowStart;
+    start + duration <= windowEnd;
+    start += duration
+  ) {
+    const end = start + duration;
+    const startTime = minutesToTime(start);
+    const endTime = minutesToTime(end);
+
+    const booking = bookings.find(
+      (b) =>
+        ["PENDING", "CONFIRMED"].includes(b.status) &&
+        rangesOverlap(
+          start,
+          end,
+          parseTimeToMinutes(b.startTime),
+          parseTimeToMinutes(b.endTime)
+        )
+    );
+
+    if (booking) {
+      schedule.push({
+        startTime,
+        endTime,
+        state: "booked",
+        bookingId: booking.id,
+        customerName: booking.customerName,
+      });
+      continue;
+    }
+
+    const block = blockedSlots.find((b) =>
+      rangesOverlap(
+        start,
+        end,
+        parseTimeToMinutes(b.startTime),
+        parseTimeToMinutes(b.endTime)
+      )
+    );
+
+    if (block) {
+      schedule.push({
+        startTime,
+        endTime,
+        state: "blocked",
+        blockId: block.id,
+        reason: block.reason,
+      });
+      continue;
+    }
+
+    schedule.push({ startTime, endTime, state: "available" });
+  }
+
+  return schedule;
 }
 
 export function bookingToEmailPayload(booking: {

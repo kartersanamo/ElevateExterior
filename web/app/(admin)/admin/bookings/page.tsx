@@ -1,3 +1,4 @@
+import { AdminCalendar } from "@/components/admin/AdminCalendar";
 import { BookingActions } from "@/components/admin/BookingActions";
 import { db } from "@/lib/db";
 import { services } from "@/lib/site-config";
@@ -55,8 +56,15 @@ export default async function AdminBookingsPage({
   return (
     <div>
       <h1 className="font-display text-3xl font-bold text-forest">Bookings</h1>
+      <p className="mt-2 text-slate/70">
+        Calendar view plus full booking details below.
+      </p>
 
-      <div className="mt-6 flex flex-wrap gap-2">
+      <div className="mt-8">
+        <AdminCalendar />
+      </div>
+
+      <div className="mt-10 flex flex-wrap gap-2">
         {["ALL", "PENDING", "CONFIRMED", "COMPLETED", "CANCELLED"].map(
           (s) => (
             <a

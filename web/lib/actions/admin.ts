@@ -43,6 +43,7 @@ export async function updateBookingStatus(
 
   revalidatePath("/admin");
   revalidatePath("/admin/bookings");
+  revalidatePath("/admin/calendar");
   return { ok: true };
 }
 
@@ -82,6 +83,101 @@ export async function removeBlockedDate(id: string) {
   await requireAdmin();
   await db.blockedDate.delete({ where: { id } });
   revalidatePath("/admin/availability");
+  revalidatePath("/admin/calendar");
+  return { ok: true };
+}
+
+export async function blockTimeSlot(
+  dateStr: string,
+  startTime: string,
+  endTime: string,
+  reason?: string
+) {
+  await requireAdmin();
+
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const date = new Date(Date.UTC(y, m - 1, d));
+
+  await db.blockedTimeSlot.create({
+    data: {
+      date,
+      startTime,
+      endTime,
+      reason: reason?.trim() || null,
+    },
+  });
+
+  revalidatePath("/admin/availability");
+  revalidatePath("/admin/calendar");
+  revalidatePath("/admin/bookings");
+  return { ok: true };
+}
+
+export async function unblockTimeSlot(blockId: string) {
+  await requireAdmin();
+  await db.blockedTimeSlot.delete({ where: { id: blockId } });
+  revalidatePath("/admin/availability");
+  revalidatePath("/admin/calendar");
+  return { ok: true };
+}
+
+export async function blockEntireDate(dateStr: string, reason?: string) {
+  await requireAdmin();
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const date = new Date(Date.UTC(y, m - 1, d));
+  await db.blockedDate.upsert({
+    where: { date },
+    create: { date, reason: reason?.trim() || null },
+    update: { reason: reason?.trim() || null },
+  });
+  revalidatePath("/admin/availability");
+  revalidatePath("/admin/calendar");
+  return { ok: true };
+}
+
+export async function createAdminUser(data: {
+  name: string;
+  email: string;
+  password: string;
+}) {
+  await requireAdmin();
+  const email = data.email.trim().toLowerCase();
+
+  if (!data.name.trim() || !email || data.password.length < 8) {
+    throw new Error("Name, email, and password (8+ chars) are required.");
+  }
+
+  const existing = await db.adminUser.findUnique({ where: { email } });
+  if (existing) {
+    throw new Error("An admin with this email already exists.");
+  }
+
+  const { hashPassword } = await import("@/lib/password");
+  await db.adminUser.create({
+    data: {
+      name: data.name.trim(),
+      email,
+      passwordHash: await hashPassword(data.password),
+    },
+  });
+
+  revalidatePath("/admin/team");
+  return { ok: true, email };
+}
+
+export async function removeAdminUser(adminId: string) {
+  const session = await requireAdmin();
+  if (session.user.id === adminId) {
+    throw new Error("You cannot remove your own account.");
+  }
+
+  const count = await db.adminUser.count();
+  if (count <= 1) {
+    throw new Error("At least one admin must remain.");
+  }
+
+  await db.adminUser.delete({ where: { id: adminId } });
+  revalidatePath("/admin/team");
   return { ok: true };
 }
 

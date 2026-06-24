@@ -54,7 +54,7 @@ export default async function AdminDashboardPage() {
             href="/admin/bookings?status=PENDING"
             className="mt-3 inline-block text-sm font-semibold text-teal hover:underline"
           >
-            Review bookings →
+            Review pending →
           </Link>
         </div>
         <div className="rounded-2xl border border-slate/10 bg-white p-6">
@@ -62,8 +62,23 @@ export default async function AdminDashboardPage() {
           <p className="mt-1 font-display text-4xl font-bold text-forest">
             {todayBookings.length}
           </p>
+          <Link
+            href="/admin/bookings"
+            className="mt-3 inline-block text-sm font-semibold text-teal hover:underline"
+          >
+            All bookings →
+          </Link>
         </div>
       </div>
+
+      <p className="mt-6">
+        <Link
+          href="/admin/calendar"
+          className="text-sm font-semibold text-teal hover:underline"
+        >
+          View full calendar →
+        </Link>
+      </p>
 
       {todayBookings.length > 0 ? (
         <section className="mt-10">

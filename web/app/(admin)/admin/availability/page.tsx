@@ -1,3 +1,4 @@
+import { AdminCalendar } from "@/components/admin/AdminCalendar";
 import { AvailabilityManager } from "@/components/admin/AvailabilityManager";
 import { db } from "@/lib/db";
 
@@ -37,8 +38,12 @@ export default async function AdminAvailabilityPage() {
         Availability
       </h1>
       <p className="mt-2 text-slate/70">
-        Set your weekly hours, block days off, and configure appointment length.
+        Block specific times on the calendar, set weekly hours, or close entire
+        days off.
       </p>
+      <div className="mt-8">
+        <AdminCalendar />
+      </div>
       <AvailabilityManager
         rules={rulesWithNames}
         blocked={blockedFormatted}
