@@ -24,8 +24,7 @@ export default async function AdminDashboardPage() {
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
 
-  const [pendingCount, todayBookings, recentPending, pendingQuotes] = await Promise.all([
-    db.booking.count({ where: { status: "PENDING" } }),
+  const [todayBookings, pendingQuotes, recentQuotes] = await Promise.all([
     db.booking.findMany({
       where: {
         status: "CONFIRMED",
@@ -33,12 +32,12 @@ export default async function AdminDashboardPage() {
       },
       orderBy: { startTime: "asc" },
     }),
-    db.booking.findMany({
+    db.quoteRequest.count({ where: { status: "PENDING" } }),
+    db.quoteRequest.findMany({
       where: { status: "PENDING" },
       orderBy: { createdAt: "desc" },
       take: 5,
     }),
-    db.quoteRequest.count({ where: { status: "PENDING" } }),
   ]);
 
   return (
@@ -46,19 +45,7 @@ export default async function AdminDashboardPage() {
       <h1 className="font-display text-3xl font-bold text-forest">Dashboard</h1>
 
       <div className="mt-8 grid gap-4 sm:grid-cols-3">
-        <div className="rounded-2xl border border-slate/10 bg-white p-6">
-          <p className="text-sm text-slate/60">Pending requests</p>
-          <p className="mt-1 font-display text-4xl font-bold text-teal">
-            {pendingCount}
-          </p>
-          <Link
-            href="/admin/bookings?status=PENDING"
-            className="mt-3 inline-block text-sm font-semibold text-teal hover:underline"
-          >
-            Review pending →
-          </Link>
-        </div>
-        <div className="rounded-2xl border border-slate/10 bg-white p-6">
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6">
           <p className="text-sm text-slate/60">Quote requests</p>
           <p className="mt-1 font-display text-4xl font-bold text-amber-600">
             {pendingQuotes}
@@ -67,7 +54,7 @@ export default async function AdminDashboardPage() {
             href="/admin/quotes"
             className="mt-3 inline-block text-sm font-semibold text-teal hover:underline"
           >
-            Send quotes →
+            Review &amp; send quotes →
           </Link>
         </div>
         <div className="rounded-2xl border border-slate/10 bg-white p-6">
@@ -80,6 +67,18 @@ export default async function AdminDashboardPage() {
             className="mt-3 inline-block text-sm font-semibold text-teal hover:underline"
           >
             All bookings →
+          </Link>
+        </div>
+        <div className="rounded-2xl border border-slate/10 bg-white p-6">
+          <p className="text-sm text-slate/60">Book online</p>
+          <p className="mt-1 text-sm text-slate/70">
+            New customers request quotes via the Book Now flow.
+          </p>
+          <Link
+            href="/book"
+            className="mt-3 inline-block text-sm font-semibold text-teal hover:underline"
+          >
+            View public form →
           </Link>
         </div>
       </div>
@@ -114,25 +113,36 @@ export default async function AdminDashboardPage() {
         </section>
       ) : null}
 
-      {recentPending.length > 0 ? (
+      {recentQuotes.length > 0 ? (
         <section className="mt-10">
           <h2 className="font-display text-xl font-bold text-forest">
-            Needs confirmation
+            Pending quote requests
           </h2>
           <ul className="mt-4 space-y-3">
-            {recentPending.map((b) => (
+            {recentQuotes.map((q) => (
               <li
-                key={b.id}
+                key={q.id}
                 className="rounded-xl border border-amber-200 bg-amber-50 p-4"
               >
-                <p className="font-semibold text-forest">
-                  {b.customerName} — {formatDate(b.scheduledDate)} at{" "}
-                  {formatTime(b.startTime)}
+                <p className="font-semibold text-forest">{q.customerName}</p>
+                <p className="text-sm text-slate/70">
+                  {q.address ?? "No address"} · {q.customerEmail}
                 </p>
-                <p className="text-sm text-slate/70">{b.address}</p>
+                {q.proposedDate && q.proposedStartTime ? (
+                  <p className="mt-1 text-sm text-slate/60">
+                    Preferred: {formatDate(q.proposedDate)} at{" "}
+                    {formatTime(q.proposedStartTime)}
+                  </p>
+                ) : null}
               </li>
             ))}
           </ul>
+          <Link
+            href="/admin/quotes"
+            className="mt-4 inline-block text-sm font-semibold text-teal hover:underline"
+          >
+            Manage all quotes →
+          </Link>
         </section>
       ) : null}
     </div>

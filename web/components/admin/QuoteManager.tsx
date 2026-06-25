@@ -30,6 +30,37 @@ const STATUS_STYLES: Record<string, string> = {
   DECLINED: "bg-slate/10 text-slate/60",
 };
 
+function parseServiceIds(json: string): string[] {
+  try {
+    return JSON.parse(json) as string[];
+  } catch {
+    return [];
+  }
+}
+
+function serviceSummary(json: string): string {
+  const ids = parseServiceIds(json);
+  if (ids.length === 0) return "Services not specified";
+  return ids
+    .map((id) => services.find((s) => s.id === id)?.title ?? id)
+    .join(", ");
+}
+
+function formatPreferredTime(quote: QuoteRow): string | null {
+  if (!quote.proposedDate || !quote.proposedStartTime) return null;
+  const date = new Date(quote.proposedDate);
+  const dateStr = date.toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+  const [h, min] = quote.proposedStartTime.split(":").map(Number);
+  const period = h >= 12 ? "PM" : "AM";
+  const hour = h % 12 || 12;
+  const timeStr = `${hour}:${String(min).padStart(2, "0")} ${period}`;
+  return `${dateStr} at ${timeStr}`;
+}
+
 export function QuoteManager({ quotes }: { quotes: QuoteRow[] }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -54,12 +85,7 @@ export function QuoteManager({ quotes }: { quotes: QuoteRow[] }) {
     setActiveId(quote.id);
     setError("");
     setMessage("");
-    let serviceIds: string[] = [];
-    try {
-      serviceIds = JSON.parse(quote.services) as string[];
-    } catch {
-      serviceIds = [];
-    }
+    let serviceIds: string[] = parseServiceIds(quote.services);
     setForm({
       amount: quote.quotedAmountCents
         ? (quote.quotedAmountCents / 100).toFixed(2)
@@ -130,6 +156,15 @@ export function QuoteManager({ quotes }: { quotes: QuoteRow[] }) {
                 </span>
               </div>
               <p className="mt-1 text-sm text-slate/60">{quote.customerEmail}</p>
+              <p className="mt-1 text-sm text-slate/70">{serviceSummary(quote.services)}</p>
+              {quote.address ? (
+                <p className="mt-1 text-sm text-slate/60">{quote.address}</p>
+              ) : null}
+              {formatPreferredTime(quote) ? (
+                <p className="mt-1 text-sm text-slate/60">
+                  Preferred: {formatPreferredTime(quote)}
+                </p>
+              ) : null}
               <p className="mt-2 line-clamp-2 text-sm text-slate/70">{quote.message}</p>
             </button>
           ))
@@ -140,6 +175,20 @@ export function QuoteManager({ quotes }: { quotes: QuoteRow[] }) {
         <section className="rounded-2xl border border-slate/10 bg-white p-6">
           <h2 className="font-display text-lg font-bold text-forest">Send quote</h2>
           <p className="mt-1 text-sm text-slate/60">{active.customerName}</p>
+          {active.customerPhone ? (
+            <p className="text-sm text-slate/60">{active.customerPhone}</p>
+          ) : null}
+          {active.address ? (
+            <p className="text-sm text-slate/60">{active.address}</p>
+          ) : null}
+          <p className="mt-2 text-sm font-semibold text-forest">
+            {serviceSummary(active.services)}
+          </p>
+          {formatPreferredTime(active) ? (
+            <p className="mt-1 text-sm text-slate/60">
+              Customer preferred: {formatPreferredTime(active)}
+            </p>
+          ) : null}
           <p className="mt-4 whitespace-pre-wrap rounded-lg bg-slate/5 p-4 text-sm">
             {active.message}
           </p>

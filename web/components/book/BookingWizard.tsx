@@ -5,7 +5,7 @@ import { CalendarScheduler } from "@/components/calendar/CalendarScheduler";
 import { Button } from "@/components/ui/Button";
 import { formatDateLong, formatTime12 } from "@/lib/scheduling/dates";
 import { services, site } from "@/lib/site-config";
-import type { BookingFormData } from "@/lib/validators/contact";
+import type { QuoteRequestFormData } from "@/lib/validators/contact";
 import {
   AlertCircle,
   CheckCircle,
@@ -39,13 +39,13 @@ export function BookingWizard() {
     );
   };
 
-  const submitBooking = async () => {
+  const submitQuoteRequest = async () => {
     if (!selectedSlot || !selectedDate) return;
 
     setLoading(true);
     setError("");
 
-    const payload: BookingFormData = {
+    const payload: QuoteRequestFormData = {
       ...form,
       services: selectedServices,
       scheduledDate: selectedDate,
@@ -55,14 +55,14 @@ export function BookingWizard() {
     };
 
     try {
-      const res = await fetch("/api/bookings", {
+      const res = await fetch("/api/quotes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? "Booking failed. Please try again.");
+        setError(data.error ?? "Quote request failed. Please try again.");
         return;
       }
       setStep("done");
@@ -81,11 +81,11 @@ export function BookingWizard() {
       <div className="mx-auto max-w-lg rounded-2xl border border-teal/30 bg-mint p-8 text-center">
         <CheckCircle className="mx-auto text-teal" size={48} aria-hidden />
         <h2 className="mt-4 font-display text-2xl font-bold text-forest">
-          Request received!
+          Quote request received!
         </h2>
         <p className="mt-3 text-slate/70">
-          We&apos;ll confirm your appointment within 24 hours. A confirmation
-          email is on its way to {form.customerEmail}.
+          We&apos;ll review your request and send a personalized quote within
+          24 hours. A confirmation email is on its way to {form.customerEmail}.
         </p>
         <p className="mt-4 text-sm text-slate/60">
           Questions? Call{" "}
@@ -121,7 +121,7 @@ export function BookingWizard() {
       {step === "services" ? (
         <div>
           <h2 className="font-display text-2xl font-bold text-forest">
-            What would you like cleaned?
+            What services do you need?
           </h2>
           <p className="mt-2 text-slate/70">Select all that apply.</p>
           <ul className="mt-6 space-y-3">
@@ -154,7 +154,7 @@ export function BookingWizard() {
               onClick={() => setStep("schedule")}
               disabled={selectedServices.length === 0}
             >
-              Pick a date & time
+              Pick a preferred date & time
             </Button>
           </div>
         </div>
@@ -163,10 +163,11 @@ export function BookingWizard() {
       {step === "schedule" ? (
         <div>
           <h2 className="font-display text-2xl font-bold text-forest">
-            Pick a date & time
+            Pick a preferred date & time
           </h2>
           <p className="mt-2 text-slate/70">
-            Green days have openings. Select a day, then choose a time slot.
+            Green days have openings. This is your preferred time — we&apos;ll
+            confirm availability when we send your quote.
           </p>
 
           <div className="mt-6">
@@ -181,7 +182,7 @@ export function BookingWizard() {
 
           {selectedDate && selectedSlot ? (
             <p className="mt-4 rounded-xl bg-mint px-4 py-3 text-sm font-semibold text-forest">
-              Selected: {formatDateLong(selectedDate)} at{" "}
+              Preferred: {formatDateLong(selectedDate)} at{" "}
               {formatTime12(selectedSlot.startTime)} –{" "}
               {formatTime12(selectedSlot.endTime)}
             </p>
@@ -249,7 +250,7 @@ export function BookingWizard() {
                   setForm((f) => ({ ...f, notes: e.target.value }))
                 }
                 className="w-full rounded-lg border border-slate/20 bg-white px-4 py-3 focus:border-teal focus:outline-none focus:ring-1 focus:ring-teal"
-                placeholder="Gate code, pets, special requests…"
+                placeholder="Project details, gate code, access instructions…"
               />
             </div>
           </div>
@@ -259,7 +260,7 @@ export function BookingWizard() {
               Back
             </Button>
             <Button
-              onClick={submitBooking}
+              onClick={submitQuoteRequest}
               disabled={
                 loading ||
                 !form.customerName ||
@@ -271,7 +272,7 @@ export function BookingWizard() {
               {loading ? (
                 <Loader2 className="animate-spin" size={18} aria-hidden />
               ) : (
-                "Submit request"
+                "Request quote"
               )}
             </Button>
           </div>

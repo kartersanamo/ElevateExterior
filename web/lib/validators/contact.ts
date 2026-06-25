@@ -18,7 +18,7 @@ export const contactSchema = z.object({
 
 export type ContactFormData = z.infer<typeof contactSchema>;
 
-export const bookingSchema = z.object({
+export const quoteRequestSchema = z.object({
   customerName: z.string().min(2, "Name is required").max(120),
   customerEmail: z.string().email("Valid email required"),
   customerPhone: z.string().min(7, "Phone is required").max(30),
@@ -33,4 +33,9 @@ export const bookingSchema = z.object({
   website: z.string().max(0).optional().or(z.literal("")),
 });
 
-export type BookingFormData = z.infer<typeof bookingSchema>;
+export type QuoteRequestFormData = z.infer<typeof quoteRequestSchema>;
+
+/** @deprecated Use quoteRequestSchema */
+export const bookingSchema = quoteRequestSchema;
+/** @deprecated Use QuoteRequestFormData */
+export type BookingFormData = QuoteRequestFormData;
