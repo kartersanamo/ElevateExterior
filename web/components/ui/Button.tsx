@@ -54,6 +54,7 @@ interface ButtonLinkProps {
   children: ReactNode;
   className?: string;
   external?: boolean;
+  onClick?: () => void;
 }
 
 export function ButtonLink({
@@ -63,6 +64,7 @@ export function ButtonLink({
   children,
   className = "",
   external = false,
+  onClick,
 }: ButtonLinkProps) {
   const classes = `inline-flex min-h-11 touch-target items-center justify-center rounded-lg font-semibold uppercase transition-all duration-300 ${variants[variant]} ${sizes[size]} ${className}`;
 
@@ -80,7 +82,7 @@ export function ButtonLink({
   }
 
   return (
-    <Link href={href} className={classes}>
+    <Link href={href} className={classes} onClick={onClick}>
       {children}
     </Link>
   );

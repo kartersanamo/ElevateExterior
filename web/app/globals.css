@@ -21,7 +21,32 @@ html {
 
 html,
 body {
-  overflow-x: clip;
+  overflow-x: hidden;
+}
+
+html.nav-menu-open,
+html.nav-menu-open body {
+  overflow: hidden;
+  height: 100%;
+  touch-action: none;
+}
+
+.mobile-nav-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  height: 100dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  background-color: var(--color-forest);
+  padding-top: var(--nav-header-height, 5.5rem);
+  padding-left: max(2rem, env(safe-area-inset-left));
+  padding-right: max(2rem, env(safe-area-inset-right));
+  padding-bottom: max(2rem, env(safe-area-inset-bottom));
 }
 
 @media (prefers-reduced-motion: reduce) {

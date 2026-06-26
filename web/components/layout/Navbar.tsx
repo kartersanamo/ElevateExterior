@@ -7,16 +7,22 @@ import { Menu, Phone, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 export function Navbar() {
   const pathname = usePathname();
   const isHome = pathname === "/";
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const headerRef = useRef<HTMLElement>(null);
-  const [headerHeight, setHeaderHeight] = useState(0);
+  const [headerHeight, setHeaderHeight] = useState(72);
 
   const solidHeader = scrolled || open || !isHome;
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
@@ -43,25 +49,20 @@ export function Navbar() {
   }, [open, solidHeader]);
 
   useEffect(() => {
-    const previousOverflow = document.body.style.overflow;
-    const previousPosition = document.body.style.position;
-    const previousWidth = document.body.style.width;
-    const previousTop = document.body.style.top;
-    const scrollY = window.scrollY;
+    if (!open) return;
 
-    if (open) {
-      document.body.style.overflow = "hidden";
-      document.body.style.position = "fixed";
-      document.body.style.width = "100%";
-      document.body.style.top = `-${scrollY}px`;
-    }
+    const html = document.documentElement;
+    const previousHtmlOverflow = html.style.overflow;
+    const previousBodyOverflow = document.body.style.overflow;
+
+    html.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+    html.classList.add("nav-menu-open");
 
     return () => {
-      document.body.style.overflow = previousOverflow;
-      document.body.style.position = previousPosition;
-      document.body.style.width = previousWidth;
-      document.body.style.top = previousTop;
-      if (open) window.scrollTo(0, scrollY);
+      html.style.overflow = previousHtmlOverflow;
+      document.body.style.overflow = previousBodyOverflow;
+      html.classList.remove("nav-menu-open");
     };
   }, [open]);
 
@@ -69,20 +70,67 @@ export function Navbar() {
     setOpen(false);
   }, [pathname]);
 
+  const mobileMenu =
+    open && mounted
+      ? createPortal(
+          <div
+            id="mobile-nav-menu"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Mobile navigation"
+            className="mobile-nav-overlay lg:hidden"
+            style={{ "--nav-header-height": `${headerHeight}px` } as React.CSSProperties}
+          >
+            <nav aria-label="Mobile navigation links">
+              <ul className="flex flex-col gap-5">
+                {navLinks.map((link) => (
+                  <li key={link.href}>
+                    <Link
+                      href={link.href}
+                      onClick={() => setOpen(false)}
+                      className="block py-2 font-display text-2xl text-white transition-colors hover:text-teal-light"
+                    >
+                      {link.label}
+                    </Link>
+                  </li>
+                ))}
+                <li>
+                  <a
+                    href={site.phoneHref}
+                    className="inline-flex items-center gap-2 py-2 font-display text-2xl text-teal-light"
+                  >
+                    <Phone size={20} aria-hidden />
+                    {site.phone}
+                  </a>
+                </li>
+                <li>
+                  <ButtonLink
+                    href="/book"
+                    variant="primary"
+                    className="w-full justify-center"
+                    onClick={() => setOpen(false)}
+                  >
+                    Book now
+                  </ButtonLink>
+                </li>
+              </ul>
+            </nav>
+          </div>,
+          document.body
+        )
+      : null;
+
   return (
     <>
       <header
         ref={headerRef}
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 pt-[env(safe-area-inset-top)] ${
+        className={`fixed top-0 left-0 right-0 z-[100] transition-[padding,background-color,box-shadow] duration-300 pt-[env(safe-area-inset-top)] ${
           solidHeader
-            ? "bg-forest/95 shadow-lg py-3"
+            ? "bg-forest shadow-lg py-3"
             : "bg-gradient-to-b from-forest/95 via-forest/80 to-transparent py-5"
-        } ${open ? "bg-forest/95 shadow-lg backdrop-blur-none" : solidHeader ? "backdrop-blur-md" : ""}`}
+        }`}
       >
-        <nav
-          className="mx-auto flex max-w-7xl items-center justify-between px-6 md:px-12 lg:px-20"
-          aria-label="Main navigation"
-        >
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 md:px-12 lg:px-20">
           <SiteLogo linked light />
 
           <ul className="hidden items-center gap-8 lg:flex">
@@ -122,58 +170,9 @@ export function Navbar() {
           >
             {open ? <X size={28} /> : <Menu size={28} />}
           </button>
-        </nav>
-      </header>
-
-      {open ? (
-        <div
-          id="mobile-nav-menu"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Mobile navigation"
-          className="fixed inset-0 z-40 overflow-y-auto overscroll-contain bg-forest lg:hidden"
-          style={{
-            paddingTop:
-              headerHeight > 0
-                ? headerHeight
-                : "calc(5.5rem + env(safe-area-inset-top))",
-          }}
-        >
-          <div className="px-8 py-8 pb-[max(2rem,env(safe-area-inset-bottom))]">
-            <ul className="flex flex-col gap-6">
-              {navLinks.map((link) => (
-                <li key={link.href}>
-                  <Link
-                    href={link.href}
-                    onClick={() => setOpen(false)}
-                    className="block py-1 font-display text-2xl text-white transition-colors hover:text-teal-light"
-                  >
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
-              <li>
-                <a
-                  href={site.phoneHref}
-                  className="inline-flex items-center gap-2 py-1 font-display text-2xl text-teal-light"
-                >
-                  <Phone size={20} aria-hidden />
-                  {site.phone}
-                </a>
-              </li>
-              <li onClick={() => setOpen(false)}>
-                <ButtonLink
-                  href="/book"
-                  variant="primary"
-                  className="w-full justify-center"
-                >
-                  Book now
-                </ButtonLink>
-              </li>
-            </ul>
-          </div>
         </div>
-      ) : null}
+      </header>
+      {mobileMenu}
     </>
   );
 }
