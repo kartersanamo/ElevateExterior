@@ -6,6 +6,7 @@ import {
   generateInvoiceNumber,
 } from "@/lib/invoice";
 import { sendInvoiceEmail } from "@/lib/job-mail";
+import { getStripe, isStripeConfigured } from "@/lib/stripe";
 
 export async function markBookingPaidFromCheckout(
   session: Stripe.Checkout.Session
@@ -54,4 +55,28 @@ export async function markBookingPaidFromCheckout(
       console.error("Review request error:", error);
     }
   }
+}
+
+export async function confirmBookingPaymentFromReturn(
+  publicToken: string,
+  sessionId?: string
+): Promise<boolean> {
+  if (!isStripeConfigured()) return false;
+
+  const booking = await db.booking.findUnique({
+    where: { publicToken },
+  });
+  if (!booking || booking.paidAt) return Boolean(booking?.paidAt);
+
+  const checkoutSessionId = sessionId ?? booking.stripeCheckoutSessionId;
+  if (!checkoutSessionId) return false;
+
+  const stripe = getStripe();
+  const session = await stripe.checkout.sessions.retrieve(checkoutSessionId);
+
+  if (session.metadata?.bookingId !== booking.id) return false;
+  if (session.payment_status !== "paid") return false;
+
+  await markBookingPaidFromCheckout(session);
+  return true;
 }

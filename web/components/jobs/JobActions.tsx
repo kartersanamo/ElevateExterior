@@ -26,12 +26,32 @@ export function JobActions({
   const [frequency, setFrequency] = useState<RecurringFrequency>("MONTHLY");
   const [paidBanner, setPaidBanner] = useState(false);
 
+  const isPaid = paid || paidBanner;
+
   useEffect(() => {
     if (searchParams.get("paid") === "1") {
       setPaidBanner(true);
       router.replace(`/appointments/${token}`, { scroll: false });
+      router.refresh();
     }
   }, [searchParams, router, token]);
+
+  useEffect(() => {
+    if (!paidBanner || paid) return;
+
+    const interval = window.setInterval(() => {
+      router.refresh();
+    }, 2000);
+
+    const timeout = window.setTimeout(() => {
+      window.clearInterval(interval);
+    }, 15000);
+
+    return () => {
+      window.clearInterval(interval);
+      window.clearTimeout(timeout);
+    };
+  }, [paidBanner, paid, router]);
 
   const pay = async () => {
     setPayError("");
@@ -67,7 +87,7 @@ export function JobActions({
 
   return (
     <div className="space-y-6">
-      {paidBanner || paid ? (
+      {isPaid ? (
         <p className="rounded-xl bg-mint px-4 py-3 text-sm font-semibold text-forest">
           Payment received — thank you! Your invoice is below.
         </p>
@@ -76,7 +96,7 @@ export function JobActions({
       <section id="pay" className="rounded-2xl border border-slate/10 bg-white p-6 shadow-sm">
         <h2 className="font-display text-xl font-bold text-forest">Pay for your service</h2>
         <p className="mt-2 text-3xl font-bold text-teal">{formatCents(amountCents)}</p>
-        {paid ? (
+        {isPaid ? (
           <p className="mt-2 text-sm text-forest">Paid in full.</p>
         ) : (
           <>

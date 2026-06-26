@@ -3,11 +3,12 @@ import { AppointmentUpcoming } from "@/components/appointments/AppointmentUpcomi
 import { ReschedulePanel } from "@/components/appointments/ReschedulePanel";
 import { JobActions } from "@/components/jobs/JobActions";
 import { db } from "@/lib/db";
+import { confirmBookingPaymentFromReturn } from "@/lib/payments";
 import { formatCents } from "@/lib/recurring";
 import { site, services } from "@/lib/site-config";
 import Image from "next/image";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 
 export const dynamic = "force-dynamic";
@@ -33,20 +34,32 @@ function serviceLabels(idsJson: string): string {
   return ids.map((id) => services.find((s) => s.id === id)?.title ?? id).join(", ");
 }
 
-export default async function AppointmentPage({
-  params,
-}: {
-  params: Promise<{ token: string }>;
-}) {
-  const { token } = await params;
-  const booking = await db.booking.findUnique({
+async function loadBooking(token: string) {
+  return db.booking.findUnique({
     where: { publicToken: token },
     include: {
       photos: { orderBy: { sortOrder: "asc" } },
       recurringService: true,
     },
   });
+}
 
+export default async function AppointmentPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ token: string }>;
+  searchParams: Promise<{ paid?: string; session_id?: string }>;
+}) {
+  const { token } = await params;
+  const { paid, session_id: sessionId } = await searchParams;
+
+  if (paid === "1") {
+    await confirmBookingPaymentFromReturn(token, sessionId);
+    redirect(`/appointments/${token}`);
+  }
+
+  const booking = await loadBooking(token);
   if (!booking) notFound();
 
   if (booking.status === "CANCELLED") {
@@ -92,6 +105,12 @@ export default async function AppointmentPage({
 
   if (booking.status !== "COMPLETED") notFound();
 
+  if (!booking.paidAt && booking.stripeCheckoutSessionId) {
+    await confirmBookingPaymentFromReturn(token);
+  }
+
+  const completedBooking = (await loadBooking(token)) ?? booking;
+
   return (
     <div className="min-h-screen-safe bg-mint/30 page-top pb-16 safe-bottom">
       <div className="mx-auto max-w-3xl px-6">
@@ -104,11 +123,11 @@ export default async function AppointmentPage({
             Your service summary
           </p>
           <h1 className="font-display text-3xl font-bold text-forest">
-            {booking.customerName}
+            {completedBooking.customerName}
           </h1>
           <p className="mt-2 text-slate/70">
-            {formatDate(booking.scheduledDate)} · {formatTime(booking.startTime)} –{" "}
-            {formatTime(booking.endTime)}
+            {formatDate(completedBooking.scheduledDate)} · {formatTime(completedBooking.startTime)} –{" "}
+            {formatTime(completedBooking.endTime)}
           </p>
         </header>
 
@@ -117,26 +136,28 @@ export default async function AppointmentPage({
           <dl className="mt-4 space-y-2 text-sm">
             <div>
               <dt className="text-slate/50">Services</dt>
-              <dd>{serviceLabels(booking.services)}</dd>
+              <dd>{serviceLabels(completedBooking.services)}</dd>
             </div>
             <div>
               <dt className="text-slate/50">Address</dt>
-              <dd>{booking.address}</dd>
+              <dd>{completedBooking.address}</dd>
             </div>
-            {booking.amountChargedCents != null ? (
+            {completedBooking.amountChargedCents != null ? (
               <div>
                 <dt className="text-slate/50">Amount</dt>
-                <dd className="font-semibold">{formatCents(booking.amountChargedCents)}</dd>
+                <dd className="font-semibold">
+                  {formatCents(completedBooking.amountChargedCents)}
+                </dd>
               </div>
             ) : null}
           </dl>
         </section>
 
-        {booking.photos.length > 0 ? (
+        {completedBooking.photos.length > 0 ? (
           <section className="mt-8">
             <h2 className="font-display text-lg font-bold text-forest">Photos</h2>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              {booking.photos.map((photo) => (
+              {completedBooking.photos.map((photo) => (
                 <div
                   key={photo.id}
                   className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-slate/5"
@@ -158,21 +179,23 @@ export default async function AppointmentPage({
           <Suspense fallback={null}>
             <JobActions
               token={token}
-              amountCents={booking.amountChargedCents ?? 0}
-              paid={Boolean(booking.paidAt)}
-              hasRecurring={Boolean(booking.recurringService)}
+              amountCents={completedBooking.amountChargedCents ?? 0}
+              paid={Boolean(completedBooking.paidAt)}
+              hasRecurring={Boolean(completedBooking.recurringService)}
             />
           </Suspense>
         </div>
 
-        {booking.invoiceHtml ? (
+        {completedBooking.invoiceHtml ? (
           <section className="mt-8 rounded-2xl border border-slate/10 bg-white p-6 shadow-sm">
             <h2 className="font-display text-lg font-bold text-forest">
-              Invoice {booking.invoiceNumber}
+              Invoice {completedBooking.invoiceNumber}
             </h2>
-            <div
-              className="mt-4 text-sm"
-              dangerouslySetInnerHTML={{ __html: booking.invoiceHtml }}
+            <iframe
+              srcDoc={completedBooking.invoiceHtml}
+              title={`Invoice ${completedBooking.invoiceNumber ?? ""}`}
+              className="mt-4 w-full min-h-[28rem] rounded-lg border border-slate/10 bg-white"
+              sandbox=""
             />
           </section>
         ) : null}

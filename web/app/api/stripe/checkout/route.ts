@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
         },
       ],
       metadata: { bookingId: booking.id, publicToken: token },
-      success_url: `${siteUrl}/appointments/${token}?paid=1`,
+      success_url: `${siteUrl}/appointments/${token}?paid=1&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${siteUrl}/appointments/${token}`,
     });
 
