@@ -27,12 +27,13 @@ function quoteHoldExpiry(days: number): Date {
 async function validateQuoteSlot(
   proposedDate: Date | null,
   proposedStartTime: string | null,
-  proposedEndTime: string | null
+  proposedEndTime: string | null,
+  quoteId: string
 ) {
   if (!proposedDate || !proposedStartTime || !proposedEndTime) return;
 
   const dateStr = proposedDate.toISOString().slice(0, 10);
-  const slots = await getSlotsForDate(dateStr);
+  const slots = await getSlotsForDate(dateStr, { excludeQuoteId: quoteId });
   const slotValid = slots.some(
     (s) => s.startTime === proposedStartTime && s.endTime === proposedEndTime
   );
@@ -58,8 +59,21 @@ export async function sendQuote(data: {
     throw new Error("This quote can no longer be updated.");
   }
 
+  if (!data.amount.trim()) {
+    throw new Error("Enter a quote amount before sending.");
+  }
+
   const quotedAmountCents = parseDollarsToCents(data.amount);
-  if (data.services.length === 0) {
+
+  let serviceIds = data.services;
+  if (serviceIds.length === 0) {
+    try {
+      serviceIds = JSON.parse(quote.services) as string[];
+    } catch {
+      serviceIds = [];
+    }
+  }
+  if (serviceIds.length === 0) {
     throw new Error("Select at least one service.");
   }
 
@@ -71,17 +85,24 @@ export async function sendQuote(data: {
     proposedDate = quote.proposedDate;
   }
 
-  const proposedStartTime = data.proposedStartTime || quote.proposedStartTime;
-  const proposedEndTime = data.proposedEndTime || quote.proposedEndTime;
+  const proposedStartTime =
+    data.proposedStartTime || quote.proposedStartTime || null;
+  const proposedEndTime =
+    data.proposedEndTime || quote.proposedEndTime || null;
 
-  await validateQuoteSlot(proposedDate, proposedStartTime, proposedEndTime);
+  await validateQuoteSlot(
+    proposedDate,
+    proposedStartTime,
+    proposedEndTime,
+    data.quoteId
+  );
 
   const updated = await db.quoteRequest.update({
     where: { id: data.quoteId },
     data: {
       status: "QUOTED",
       quotedAmountCents,
-      services: JSON.stringify(data.services),
+      services: JSON.stringify(serviceIds),
       quoteNotes: data.quoteNotes?.trim() || null,
       proposedDate,
       proposedStartTime: proposedStartTime || null,

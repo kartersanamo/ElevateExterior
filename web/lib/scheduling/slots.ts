@@ -37,7 +37,7 @@ export async function getSlotDurationMinutes(): Promise<number> {
 
 async function getBlockedRangesForDate(
   dateStr: string,
-  options?: { excludeBookingId?: string }
+  options?: { excludeBookingId?: string; excludeQuoteId?: string }
 ) {
   const dayStart = parseDateOnly(dateStr);
   const dayEnd = new Date(dayStart);
@@ -64,6 +64,9 @@ async function getBlockedRangesForDate(
         proposedStartTime: { not: null },
         proposedEndTime: { not: null },
         OR: [{ holdExpiresAt: null }, { holdExpiresAt: { gt: now } }],
+        ...(options?.excludeQuoteId
+          ? { id: { not: options.excludeQuoteId } }
+          : {}),
       },
     }),
   ]);
@@ -91,7 +94,7 @@ async function getBlockedRangesForDate(
 
 export async function getSlotsForDate(
   dateStr: string,
-  options?: { excludeBookingId?: string }
+  options?: { excludeBookingId?: string; excludeQuoteId?: string }
 ): Promise<TimeSlot[]> {
   const date = parseDateOnly(dateStr);
   const local = new Date(

@@ -54,7 +54,7 @@ export default async function AdminDashboardPage() {
             href="/admin/quotes"
             className="mt-3 inline-block text-sm font-semibold text-teal hover:underline"
           >
-            Review &amp; send quotes →
+            Review quotes →
           </Link>
         </div>
         <div className="rounded-2xl border border-slate/10 bg-white p-6">

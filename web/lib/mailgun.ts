@@ -1,9 +1,22 @@
 import FormData from "form-data";
 import Mailgun from "mailgun.js";
 
+function stripEnvQuotes(value: string): string {
+  const trimmed = value.trim();
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  ) {
+    return trimmed.slice(1, -1);
+  }
+  return trimmed;
+}
+
 export function getMailgunClient() {
-  const apiKey = process.env.MAILGUN_API_KEY;
-  const domain = process.env.MAILGUN_DOMAIN;
+  const apiKey = process.env.MAILGUN_API_KEY?.trim();
+  const domain = process.env.MAILGUN_DOMAIN
+    ? stripEnvQuotes(process.env.MAILGUN_DOMAIN)
+    : undefined;
 
   if (!apiKey || !domain) {
     return null;
@@ -14,7 +27,21 @@ export function getMailgunClient() {
 }
 
 export function getMailFromAddress(): string | null {
-  return process.env.MAILGUN_FROM ?? null;
+  const domain = process.env.MAILGUN_DOMAIN
+    ? stripEnvQuotes(process.env.MAILGUN_DOMAIN)
+    : undefined;
+
+  const raw = process.env.MAILGUN_FROM
+    ? stripEnvQuotes(process.env.MAILGUN_FROM)
+    : null;
+
+  if (raw) return raw;
+
+  if (domain) {
+    return `Elevate Exterior <noreply@${domain}>`;
+  }
+
+  return null;
 }
 
 export function getContactRecipients(): string[] {
