@@ -12,7 +12,7 @@ export function Footer() {
       <div className="section-padding pb-12">
         <div className="mx-auto grid max-w-7xl grid-cols-1 gap-12 md:grid-cols-2 lg:grid-cols-4 lg:gap-8">
           <div>
-            <SiteLogo linked light className="mb-4" />
+            <SiteLogo linked size="lg" className="mb-4" />
             <p className="mb-6 text-sm leading-relaxed text-white/70">
               {site.description}
             </p>

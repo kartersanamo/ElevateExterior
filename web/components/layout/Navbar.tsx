@@ -73,65 +73,64 @@ export function Navbar() {
   const mobileMenu =
     open && mounted
       ? createPortal(
-          <div
-            id="mobile-nav-menu"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Mobile navigation"
-            className="mobile-nav-overlay lg:hidden"
-            style={{ "--nav-header-height": `${headerHeight}px` } as React.CSSProperties}
-          >
-            <nav aria-label="Mobile navigation links">
-              <ul className="flex flex-col gap-5">
-                {navLinks.map((link) => (
-                  <li key={link.href}>
-                    <Link
-                      href={link.href}
-                      onClick={() => setOpen(false)}
-                      className="block py-2 font-display text-2xl text-white transition-colors hover:text-teal-light"
-                    >
-                      {link.label}
-                    </Link>
-                  </li>
-                ))}
-                <li>
-                  <a
-                    href={site.phoneHref}
-                    className="inline-flex items-center gap-2 py-2 font-display text-2xl text-teal-light"
-                  >
-                    <Phone size={20} aria-hidden />
-                    {site.phone}
-                  </a>
-                </li>
-                <li>
-                  <ButtonLink
-                    href="/book"
-                    variant="primary"
-                    className="w-full justify-center"
+        <div
+          id="mobile-nav-menu"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Mobile navigation"
+          className="mobile-nav-overlay lg:hidden"
+          style={{ "--nav-header-height": `${headerHeight}px` } as React.CSSProperties}
+        >
+          <nav aria-label="Mobile navigation links">
+            <ul className="flex flex-col gap-5">
+              {navLinks.map((link) => (
+                <li key={link.href}>
+                  <Link
+                    href={link.href}
                     onClick={() => setOpen(false)}
+                    className="block py-2 font-display text-2xl text-white transition-colors hover:text-teal-light"
                   >
-                    Book now
-                  </ButtonLink>
+                    {link.label}
+                  </Link>
                 </li>
-              </ul>
-            </nav>
-          </div>,
-          document.body
-        )
+              ))}
+              <li>
+                <a
+                  href={site.phoneHref}
+                  className="inline-flex items-center gap-2 py-2 font-display text-2xl text-teal-light"
+                >
+                  <Phone size={20} aria-hidden />
+                  {site.phone}
+                </a>
+              </li>
+              <li>
+                <ButtonLink
+                  href="/book"
+                  variant="primary"
+                  className="w-full justify-center"
+                  onClick={() => setOpen(false)}
+                >
+                  Book now
+                </ButtonLink>
+              </li>
+            </ul>
+          </nav>
+        </div>,
+        document.body
+      )
       : null;
 
   return (
     <>
       <header
         ref={headerRef}
-        className={`fixed top-0 left-0 right-0 z-[100] transition-[padding,background-color,box-shadow] duration-300 pt-[env(safe-area-inset-top)] ${
-          solidHeader
-            ? "bg-forest shadow-lg py-3"
-            : "bg-gradient-to-b from-forest/95 via-forest/80 to-transparent py-5"
-        }`}
+        className={`fixed top-0 left-0 right-0 z-[100] transition-[padding,background-color,box-shadow] duration-300 pt-[env(safe-area-inset-top)] ${solidHeader
+          ? "bg-forest shadow-lg py-3"
+          : "bg-gradient-to-b from-forest/95 via-forest/80 to-transparent py-5"
+          }`}
       >
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 md:px-12 lg:px-20">
-          <SiteLogo linked light />
+          <SiteLogo linked size="lg" />
 
           <ul className="hidden items-center gap-8 lg:flex">
             {navLinks.map((link) => (
