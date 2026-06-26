@@ -161,9 +161,11 @@ export default async function AdminJobPage({
           <h2 className="font-display text-lg font-bold text-forest">
             Invoice {booking.invoiceNumber}
           </h2>
-          <div
-            className="prose prose-sm mt-4 max-w-none"
-            dangerouslySetInnerHTML={{ __html: booking.invoiceHtml }}
+          <iframe
+            srcDoc={booking.invoiceHtml}
+            title={`Invoice ${booking.invoiceNumber ?? ""}`}
+            className="mt-4 w-full min-h-[28rem] rounded-lg border border-slate/10 bg-white"
+            sandbox=""
           />
         </section>
       ) : null}

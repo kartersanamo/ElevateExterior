@@ -29,7 +29,7 @@ export function DifferenceSection() {
           <AnimateIn delay={0.15}>
             <div className="relative aspect-[4/3] overflow-hidden rounded-2xl shadow-xl">
               <Image
-                src="https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=1000&q=80"
+                src="https://images.pexels.com/photos/5652626/pexels-photo-5652626.jpeg?_gl=1*jutudy*_ga*MTYyNjExNjAwLjE3NzYwODk1MDA.*_ga_8JE65Q40S6*czE3ODI0ODgyNzYkbzEyJGcxJHQxNzgyNDg4Mjk1JGo0MSRsMCRoMA.."
                 alt="Technician soft washing a home's siding"
                 fill
                 className="object-cover"
