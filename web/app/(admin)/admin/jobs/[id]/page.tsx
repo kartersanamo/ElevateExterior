@@ -45,7 +45,7 @@ export default async function AdminJobPage({
   if (!booking) notFound();
 
   const publicUrl = booking.publicToken
-    ? `${getSiteUrl()}/jobs/${booking.publicToken}`
+    ? `${getSiteUrl()}/appointments/${booking.publicToken}`
     : null;
 
   return (

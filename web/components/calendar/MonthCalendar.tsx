@@ -102,7 +102,7 @@ export function MonthCalendar({
         <button
           type="button"
           onClick={prev}
-          className="rounded-lg p-2 text-forest hover:bg-mint"
+          className="touch-target rounded-lg p-2 text-forest hover:bg-mint"
           aria-label="Previous month"
         >
           <ChevronLeft size={size === "large" ? 26 : 22} />
@@ -117,7 +117,7 @@ export function MonthCalendar({
         <button
           type="button"
           onClick={next}
-          className="rounded-lg p-2 text-forest hover:bg-mint"
+          className="touch-target rounded-lg p-2 text-forest hover:bg-mint"
           aria-label="Next month"
         >
           <ChevronRight size={size === "large" ? 26 : 22} />
@@ -170,10 +170,10 @@ export function MonthCalendar({
               type="button"
               disabled={!clickable}
               onClick={() => clickable && onDateSelect(cell.date)}
-              className={`relative flex flex-col items-center justify-center rounded-xl border font-semibold transition-all ${styles.cell} ${
+              className={`relative flex min-h-11 touch-target flex-col items-center justify-center rounded-xl border font-semibold transition-all ${styles.cell} ${
                 size === "large"
                   ? "min-h-[3.5rem] text-base sm:aspect-square sm:min-h-0 sm:text-lg"
-                  : "aspect-square text-sm"
+                  : "min-h-11 text-sm sm:aspect-square"
               } ${
                 isSelected
                   ? "scale-[1.02] ring-2 ring-teal ring-offset-2"

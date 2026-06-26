@@ -3,7 +3,7 @@ import LoginPage from "./login-page";
 
 export default function Page() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-forest" />}>
+    <Suspense fallback={<div className="min-h-screen-safe bg-forest" />}>
       <LoginPage />
     </Suspense>
   );

@@ -132,7 +132,7 @@ export function BookingWizard() {
                   <button
                     type="button"
                     onClick={() => toggleService(service.id)}
-                    className={`w-full rounded-xl border p-4 text-left transition-colors ${
+                    className={`touch-target w-full rounded-xl border p-4 text-left transition-colors ${
                       selected
                         ? "border-teal bg-mint"
                         : "border-slate/10 bg-white hover:border-teal/40"
@@ -149,10 +149,11 @@ export function BookingWizard() {
               );
             })}
           </ul>
-          <div className="mt-8 flex justify-end">
+          <div className="mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
             <Button
               onClick={() => setStep("schedule")}
               disabled={selectedServices.length === 0}
+              className="w-full sm:w-auto"
             >
               Pick a preferred date & time
             </Button>
@@ -188,14 +189,19 @@ export function BookingWizard() {
             </p>
           ) : null}
 
-          <div className="mt-8 flex justify-between">
-            <Button variant="outline" onClick={() => setStep("services")}>
+          <div className="mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
+            <Button
+              variant="outline"
+              onClick={() => setStep("services")}
+              className="w-full sm:w-auto"
+            >
               <ChevronLeft className="mr-1" size={18} aria-hidden />
               Back
             </Button>
             <Button
               onClick={() => setStep("details")}
               disabled={!selectedDate || !selectedSlot}
+              className="w-full sm:w-auto"
             >
               Continue
             </Button>
@@ -234,8 +240,17 @@ export function BookingWizard() {
                   onChange={(e) =>
                     setForm((f) => ({ ...f, [key]: e.target.value }))
                   }
-                  className="w-full rounded-lg border border-slate/20 bg-white px-4 py-3 focus:border-teal focus:outline-none focus:ring-1 focus:ring-teal"
+                  className="form-input"
                   required
+                  autoComplete={
+                    key === "customerName"
+                      ? "name"
+                      : key === "customerEmail"
+                        ? "email"
+                        : key === "customerPhone"
+                          ? "tel"
+                          : "street-address"
+                  }
                 />
               </div>
             ))}
@@ -249,13 +264,17 @@ export function BookingWizard() {
                 onChange={(e) =>
                   setForm((f) => ({ ...f, notes: e.target.value }))
                 }
-                className="w-full rounded-lg border border-slate/20 bg-white px-4 py-3 focus:border-teal focus:outline-none focus:ring-1 focus:ring-teal"
+                className="form-input"
                 placeholder="Project details, gate code, access instructions…"
               />
             </div>
           </div>
-          <div className="mt-8 flex justify-between">
-            <Button variant="outline" onClick={() => setStep("schedule")}>
+          <div className="mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
+            <Button
+              variant="outline"
+              onClick={() => setStep("schedule")}
+              className="w-full sm:w-auto"
+            >
               <ChevronLeft className="mr-1" size={18} aria-hidden />
               Back
             </Button>
@@ -268,6 +287,7 @@ export function BookingWizard() {
                 !form.customerPhone ||
                 !form.address
               }
+              className="w-full sm:w-auto"
             >
               {loading ? (
                 <Loader2 className="animate-spin" size={18} aria-hidden />

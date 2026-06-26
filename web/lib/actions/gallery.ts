@@ -2,6 +2,7 @@
 
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { deleteGalleryFile } from "@/lib/uploads";
 import { revalidatePath } from "next/cache";
 
 async function requireAdmin() {
@@ -15,11 +16,12 @@ export async function createGalleryImage(data: {
   category: string;
   sortOrder?: number;
   published?: boolean;
+  storageKey?: string;
 }) {
   await requireAdmin();
 
   if (!data.src.trim() || !data.alt.trim() || !data.category.trim()) {
-    throw new Error("Image URL, alt text, and category are required.");
+    throw new Error("Image, alt text, and category are required.");
   }
 
   const maxOrder = await db.galleryImage.aggregate({ _max: { sortOrder: true } });
@@ -27,6 +29,7 @@ export async function createGalleryImage(data: {
   await db.galleryImage.create({
     data: {
       src: data.src.trim(),
+      storageKey: data.storageKey?.trim() || null,
       alt: data.alt.trim(),
       category: data.category.trim(),
       sortOrder: data.sortOrder ?? (maxOrder._max.sortOrder ?? 0) + 1,
@@ -71,6 +74,10 @@ export async function updateGalleryImage(
 
 export async function deleteGalleryImage(id: string) {
   await requireAdmin();
+  const image = await db.galleryImage.findUnique({ where: { id } });
+  if (image?.storageKey) {
+    await deleteGalleryFile(image.storageKey);
+  }
   await db.galleryImage.delete({ where: { id } });
   revalidatePath("/admin/gallery");
   revalidatePath("/gallery");

@@ -1,10 +1,11 @@
 import { db } from "@/lib/db";
+import { sendReviewRequest } from "@/lib/review-mail";
+import type Stripe from "stripe";
 import {
   buildInvoiceHtml,
   generateInvoiceNumber,
 } from "@/lib/invoice";
 import { sendInvoiceEmail } from "@/lib/job-mail";
-import type Stripe from "stripe";
 
 export async function markBookingPaidFromCheckout(
   session: Stripe.Checkout.Session
@@ -40,5 +41,17 @@ export async function markBookingPaidFromCheckout(
     await sendInvoiceEmail(updated, invoiceHtml);
   } catch (error) {
     console.error("Invoice email error:", error);
+  }
+
+  if (!updated.reviewRequestSentAt) {
+    try {
+      await sendReviewRequest(updated);
+      await db.booking.update({
+        where: { id: bookingId },
+        data: { reviewRequestSentAt: new Date() },
+      });
+    } catch (error) {
+      console.error("Review request error:", error);
+    }
   }
 }

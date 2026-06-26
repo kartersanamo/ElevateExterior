@@ -5,6 +5,7 @@ import {
   sendQuoteRequestNotification,
 } from "@/lib/quote-mail";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { getSlotsForDate } from "@/lib/scheduling/slots";
 import { services } from "@/lib/site-config";
 import {
   quoteRequestSchema,
@@ -47,6 +48,17 @@ export async function createQuoteRequest(
   const [y, m, d] = data.scheduledDate.split("-").map(Number);
   const proposedDate = new Date(Date.UTC(y, m - 1, d));
 
+  const slots = await getSlotsForDate(data.scheduledDate);
+  const slotValid = slots.some(
+    (s) => s.startTime === data.startTime && s.endTime === data.endTime
+  );
+  if (!slotValid) {
+    throw new Error("That time slot is no longer available. Please pick another.");
+  }
+
+  const holdExpiresAt = new Date();
+  holdExpiresAt.setHours(holdExpiresAt.getHours() + 72);
+
   const quote = await db.quoteRequest.create({
     data: {
       customerName: data.customerName,
@@ -59,6 +71,7 @@ export async function createQuoteRequest(
       proposedStartTime: data.startTime,
       proposedEndTime: data.endTime,
       status: "PENDING",
+      holdExpiresAt,
     },
   });
 

@@ -165,7 +165,7 @@ export function CalendarScheduler({
             value={blockReason}
             onChange={(e) => setBlockReason(e.target.value)}
             placeholder="Dentist appointment, personal errand…"
-            className="mt-2 w-full rounded-lg border border-slate/20 px-3 py-2 text-sm"
+            className="mt-2 w-full rounded-lg border border-slate/20 px-3 py-2 text-base"
           />
         </div>
       ) : null}

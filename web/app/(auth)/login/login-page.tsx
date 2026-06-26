@@ -38,7 +38,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-forest px-6">
+    <div className="flex min-h-screen-safe items-center justify-center bg-forest px-6 py-8 pt-[max(2rem,env(safe-area-inset-top))] pb-[max(2rem,env(safe-area-inset-bottom))]">
       <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-xl">
         <h1 className="font-display text-2xl font-bold text-forest">
           {site.shortName} Admin
@@ -61,7 +61,7 @@ export default function LoginPage() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-lg border border-slate/20 px-4 py-3 focus:border-teal focus:outline-none focus:ring-1 focus:ring-teal"
+              className="form-input"
               required
               autoComplete="email"
             />
@@ -78,7 +78,7 @@ export default function LoginPage() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-lg border border-slate/20 px-4 py-3 focus:border-teal focus:outline-none focus:ring-1 focus:ring-teal"
+              className="form-input"
               required
               autoComplete="current-password"
             />
@@ -89,7 +89,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-lg bg-teal py-3 font-semibold text-white hover:bg-teal-light disabled:opacity-50"
+            className="touch-target w-full rounded-lg bg-teal py-3 font-semibold text-white hover:bg-teal-light disabled:opacity-50"
           >
             {loading ? "Signing in…" : "Sign in"}
           </button>

@@ -29,7 +29,7 @@ export function JobActions({
   useEffect(() => {
     if (searchParams.get("paid") === "1") {
       setPaidBanner(true);
-      router.replace(`/jobs/${token}`, { scroll: false });
+      router.replace(`/appointments/${token}`, { scroll: false });
     }
   }, [searchParams, router, token]);
 
@@ -83,7 +83,7 @@ export function JobActions({
             <button
               type="button"
               onClick={pay}
-              className="mt-4 rounded-lg bg-teal px-6 py-3 text-sm font-semibold text-white hover:bg-teal-light"
+              className="touch-target mt-4 rounded-lg bg-teal px-6 py-3 text-sm font-semibold text-white hover:bg-teal-light"
             >
               Pay securely with Stripe
             </button>
@@ -106,7 +106,7 @@ export function JobActions({
             <select
               value={frequency}
               onChange={(e) => setFrequency(e.target.value as RecurringFrequency)}
-              className="w-full max-w-xs rounded-lg border border-slate/20 px-3 py-2 text-sm"
+              className="form-input max-w-xs"
             >
               {RECURRING_FREQUENCY_OPTIONS.map((o) => (
                 <option key={o.value} value={o.value}>
@@ -118,7 +118,7 @@ export function JobActions({
               type="button"
               disabled={pending}
               onClick={setupRecurring}
-              className="rounded-lg bg-forest px-6 py-3 text-sm font-semibold text-white disabled:opacity-50"
+              className="touch-target rounded-lg bg-forest px-6 py-3 text-sm font-semibold text-white disabled:opacity-50"
             >
               {pending ? "Saving…" : "Set up recurring service"}
             </button>

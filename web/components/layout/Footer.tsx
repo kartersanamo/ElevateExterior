@@ -109,12 +109,20 @@ export function Footer() {
         </div>
       </div>
 
-      <div className="border-t border-white/10 px-6 py-6 md:px-12 lg:px-20">
+      <div className="safe-bottom border-t border-white/10 px-6 py-6 md:px-12 lg:px-20">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 text-xs text-white/50 md:flex-row">
           <p>
             © {year} {site.legalName}. All rights reserved.
           </p>
-          <span>{site.serviceArea}</span>
+          <div className="flex flex-wrap items-center justify-center gap-4">
+            <Link href="/privacy" className="hover:text-teal-light">
+              Privacy
+            </Link>
+            <Link href="/terms" className="hover:text-teal-light">
+              Terms
+            </Link>
+            <span>{site.serviceArea}</span>
+          </div>
         </div>
       </div>
     </footer>

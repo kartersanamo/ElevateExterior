@@ -35,20 +35,36 @@ export async function getSlotDurationMinutes(): Promise<number> {
   return settings?.slotDurationMinutes ?? site.slotDurationMinutes;
 }
 
-async function getBlockedRangesForDate(dateStr: string) {
+async function getBlockedRangesForDate(
+  dateStr: string,
+  options?: { excludeBookingId?: string }
+) {
   const dayStart = parseDateOnly(dateStr);
   const dayEnd = new Date(dayStart);
   dayEnd.setUTCDate(dayEnd.getUTCDate() + 1);
+  const now = new Date();
 
-  const [bookings, blockedSlots] = await Promise.all([
+  const [bookings, blockedSlots, quoteHolds] = await Promise.all([
     db.booking.findMany({
       where: {
         scheduledDate: { gte: dayStart, lt: dayEnd },
         status: { in: ["PENDING", "CONFIRMED"] },
+        ...(options?.excludeBookingId
+          ? { id: { not: options.excludeBookingId } }
+          : {}),
       },
     }),
     db.blockedTimeSlot.findMany({
       where: { date: dayStart },
+    }),
+    db.quoteRequest.findMany({
+      where: {
+        status: { in: ["PENDING", "QUOTED"] },
+        proposedDate: { gte: dayStart, lt: dayEnd },
+        proposedStartTime: { not: null },
+        proposedEndTime: { not: null },
+        OR: [{ holdExpiresAt: null }, { holdExpiresAt: { gt: now } }],
+      },
     }),
   ]);
 
@@ -63,10 +79,20 @@ async function getBlockedRangesForDate(dateStr: string) {
       end: parseTimeToMinutes(b.endTime),
       kind: "block" as const,
     })),
+    ...quoteHolds
+      .filter((q) => q.proposedStartTime && q.proposedEndTime)
+      .map((q) => ({
+        start: parseTimeToMinutes(q.proposedStartTime!),
+        end: parseTimeToMinutes(q.proposedEndTime!),
+        kind: "quote_hold" as const,
+      })),
   ];
 }
 
-export async function getSlotsForDate(dateStr: string): Promise<TimeSlot[]> {
+export async function getSlotsForDate(
+  dateStr: string,
+  options?: { excludeBookingId?: string }
+): Promise<TimeSlot[]> {
   const date = parseDateOnly(dateStr);
   const local = new Date(
     date.getUTCFullYear(),
@@ -89,7 +115,7 @@ export async function getSlotsForDate(dateStr: string): Promise<TimeSlot[]> {
   const duration = await getSlotDurationMinutes();
   const windowStart = parseTimeToMinutes(rule.startTime);
   const windowEnd = parseTimeToMinutes(rule.endTime);
-  const occupied = await getBlockedRangesForDate(dateStr);
+  const occupied = await getBlockedRangesForDate(dateStr, options);
 
   const slots: TimeSlot[] = [];
 
@@ -201,10 +227,11 @@ export async function getMonthSummaries(
 export interface DayScheduleSlot {
   startTime: string;
   endTime: string;
-  state: "available" | "booked" | "blocked" | "past";
+  state: "available" | "booked" | "blocked" | "quote_hold" | "past";
   bookingId?: string;
   customerName?: string;
   blockId?: string;
+  quoteId?: string;
   reason?: string | null;
 }
 
@@ -235,7 +262,7 @@ export async function getDaySchedule(dateStr: string): Promise<DayScheduleSlot[]
   const dayEnd = new Date(dayStart);
   dayEnd.setUTCDate(dayEnd.getUTCDate() + 1);
 
-  const [bookings, blockedSlots] = await Promise.all([
+  const [bookings, blockedSlots, quoteHolds] = await Promise.all([
     db.booking.findMany({
       where: {
         scheduledDate: { gte: dayStart, lt: dayEnd },
@@ -246,6 +273,16 @@ export async function getDaySchedule(dateStr: string): Promise<DayScheduleSlot[]
     db.blockedTimeSlot.findMany({
       where: { date: dayStart },
       orderBy: { startTime: "asc" },
+    }),
+    db.quoteRequest.findMany({
+      where: {
+        status: { in: ["PENDING", "QUOTED"] },
+        proposedDate: { gte: dayStart, lt: dayEnd },
+        proposedStartTime: { not: null },
+        proposedEndTime: { not: null },
+        OR: [{ holdExpiresAt: null }, { holdExpiresAt: { gt: new Date() } }],
+      },
+      orderBy: { createdAt: "asc" },
     }),
   ]);
 
@@ -302,6 +339,30 @@ export async function getDaySchedule(dateStr: string): Promise<DayScheduleSlot[]
       continue;
     }
 
+    const quoteHold = quoteHolds.find(
+      (q) =>
+        q.proposedStartTime &&
+        q.proposedEndTime &&
+        rangesOverlap(
+          start,
+          end,
+          parseTimeToMinutes(q.proposedStartTime),
+          parseTimeToMinutes(q.proposedEndTime)
+        )
+    );
+
+    if (quoteHold) {
+      schedule.push({
+        startTime,
+        endTime,
+        state: "quote_hold",
+        quoteId: quoteHold.id,
+        customerName: quoteHold.customerName,
+        reason: quoteHold.status === "PENDING" ? "Quote request hold" : "Quoted hold",
+      });
+      continue;
+    }
+
     schedule.push({ startTime, endTime, state: "available" });
   }
 
@@ -320,6 +381,7 @@ export function bookingToEmailPayload(booking: {
   startTime: string;
   endTime: string;
   status: import("@prisma/client").BookingStatus;
+  publicToken?: string | null;
 }) {
   return {
     id: booking.id,
@@ -333,5 +395,6 @@ export function bookingToEmailPayload(booking: {
     startTime: booking.startTime,
     endTime: booking.endTime,
     status: booking.status,
+    publicToken: booking.publicToken,
   };
 }

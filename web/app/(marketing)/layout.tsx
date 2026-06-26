@@ -10,7 +10,7 @@ export default function MarketingLayout({
     <>
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[200] focus:bg-teal focus:px-4 focus:py-2 focus:text-white"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-[max(1rem,env(safe-area-inset-top))] focus:z-[200] focus:bg-teal focus:px-4 focus:py-2 focus:text-white"
       >
         Skip to main content
       </a>

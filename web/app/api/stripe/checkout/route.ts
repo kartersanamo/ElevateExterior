@@ -51,8 +51,8 @@ export async function POST(request: NextRequest) {
         },
       ],
       metadata: { bookingId: booking.id, publicToken: token },
-      success_url: `${siteUrl}/jobs/${token}?paid=1`,
-      cancel_url: `${siteUrl}/jobs/${token}`,
+      success_url: `${siteUrl}/appointments/${token}?paid=1`,
+      cancel_url: `${siteUrl}/appointments/${token}`,
     });
 
     await db.booking.update({

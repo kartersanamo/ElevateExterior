@@ -4,6 +4,8 @@ import {
   getMailgunClient,
 } from "@/lib/mailgun";
 import { site } from "@/lib/site-config";
+import { sendSms } from "@/lib/sms";
+import { appointmentUrl } from "@/lib/urls";
 import type { BookingStatus } from "@prisma/client";
 
 export interface BookingEmailPayload {
@@ -18,6 +20,7 @@ export interface BookingEmailPayload {
   startTime: string;
   endTime: string;
   status: BookingStatus;
+  publicToken?: string | null;
 }
 
 function formatDate(dateStr: string): string {
@@ -118,6 +121,11 @@ export async function sendBookingConfirmedEmail(
   payload: BookingEmailPayload
 ): Promise<void> {
   const details = bookingDetailsText(payload);
+  const link = payload.publicToken ? appointmentUrl(payload.publicToken) : null;
+  const linkText = link ? `\n\nManage your appointment: ${link}` : "";
+  const linkHtml = link
+    ? `<p><a href="${link}" style="display:inline-block;background:#0d7a6f;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;">View your appointment</a></p>`
+    : "";
 
   await sendMail({
     to: [payload.customerEmail],
@@ -126,7 +134,7 @@ export async function sendBookingConfirmedEmail(
 
 Your cleaning is confirmed!
 
-${details}
+${details}${linkText}
 
 See you then! Questions? Call ${site.phone}.
 
@@ -135,9 +143,17 @@ See you then! Questions? Call ${site.phone}.
 <p>Hi ${payload.customerName},</p>
 <p><strong>Your cleaning is confirmed!</strong></p>
 <pre style="white-space:pre-wrap;font-family:sans-serif;background:#f4f4f4;padding:12px;border-radius:8px;">${details}</pre>
+${linkHtml}
 <p>See you then! Questions? Call <a href="${site.phoneHref}">${site.phone}</a>.</p>
 <p>— ${site.name}</p>`,
   });
+
+  if (link) {
+    await sendSms({
+      to: payload.customerPhone,
+      body: `Your Elevate Exterior cleaning is confirmed! ${link}`,
+    });
+  }
 }
 
 export async function sendBookingCancelledEmail(

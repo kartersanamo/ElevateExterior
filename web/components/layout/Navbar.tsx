@@ -24,15 +24,31 @@ export function Navbar() {
   }, []);
 
   useEffect(() => {
-    document.body.style.overflow = open ? "hidden" : "";
+    const previousOverflow = document.body.style.overflow;
+    const previousPosition = document.body.style.position;
+    const previousWidth = document.body.style.width;
+    const previousTop = document.body.style.top;
+    const scrollY = window.scrollY;
+
+    if (open) {
+      document.body.style.overflow = "hidden";
+      document.body.style.position = "fixed";
+      document.body.style.width = "100%";
+      document.body.style.top = `-${scrollY}px`;
+    }
+
     return () => {
-      document.body.style.overflow = "";
+      document.body.style.overflow = previousOverflow;
+      document.body.style.position = previousPosition;
+      document.body.style.width = previousWidth;
+      document.body.style.top = previousTop;
+      if (open) window.scrollTo(0, scrollY);
     };
   }, [open]);
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 pt-[env(safe-area-inset-top)] ${
         solidHeader
           ? "bg-forest/95 shadow-lg backdrop-blur-md py-3"
           : "bg-gradient-to-b from-forest/95 via-forest/80 to-transparent py-5"
@@ -73,7 +89,7 @@ export function Navbar() {
 
         <button
           type="button"
-          className="p-2 text-white lg:hidden"
+          className="touch-target rounded-lg p-2 text-white lg:hidden"
           onClick={() => setOpen(!open)}
           aria-expanded={open}
           aria-label={open ? "Close menu" : "Open menu"}
@@ -83,7 +99,7 @@ export function Navbar() {
       </nav>
 
       {open ? (
-        <div className="fixed inset-0 top-[60px] z-40 bg-forest px-8 py-10 lg:hidden">
+        <div className="fixed inset-x-0 bottom-0 top-[calc(3.75rem+env(safe-area-inset-top))] z-40 overflow-y-auto overscroll-contain bg-forest px-8 py-10 pb-[max(2.5rem,env(safe-area-inset-bottom))] lg:hidden">
           <ul className="flex flex-col gap-6">
             {navLinks.map((link) => (
               <li key={link.href}>

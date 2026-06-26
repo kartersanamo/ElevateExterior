@@ -20,6 +20,7 @@ export default async function AdminQuotesPage() {
           ...q,
           createdAt: q.createdAt.toISOString(),
           proposedDate: q.proposedDate?.toISOString() ?? null,
+          holdExpiresAt: q.holdExpiresAt?.toISOString() ?? null,
         }))}
       />
     </div>

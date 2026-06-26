@@ -1,3 +1,4 @@
+import { AdminMobileNav } from "@/components/admin/AdminMobileNav";
 import Link from "next/link";
 import { signOut } from "@/lib/auth";
 import { site } from "@/lib/site-config";
@@ -34,8 +35,8 @@ export function AdminShell({
   mustChangePassword?: boolean;
 }) {
   return (
-    <div className="min-h-screen bg-slate/5">
-      <header className="border-b border-slate/10 bg-forest text-white">
+    <div className="min-h-screen-safe bg-slate/5">
+      <header className="border-b border-slate/10 bg-forest text-white pt-[env(safe-area-inset-top)]">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <div>
             <p className="text-xs uppercase tracking-wider text-teal-light">
@@ -70,7 +71,8 @@ export function AdminShell({
           </div>
         </div>
       </header>
-      <div className="mx-auto flex max-w-6xl gap-8 px-6 py-8">
+      {!mustChangePassword ? <AdminMobileNav /> : null}
+      <div className="mx-auto flex max-w-6xl gap-8 px-6 py-8 pb-[max(2rem,env(safe-area-inset-bottom))]">
         {!mustChangePassword ? (
           <nav className="hidden w-48 shrink-0 md:block">
             <ul className="space-y-1">

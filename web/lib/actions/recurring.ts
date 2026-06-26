@@ -79,11 +79,13 @@ export async function createRecurringFromJob(data: {
       sourceBookingId: booking.id,
       nextServiceDate,
       lastServiceDate: booking.completedAt ?? booking.scheduledDate,
+      preferredStartTime: booking.startTime,
+      preferredEndTime: booking.endTime,
     },
   });
 
   revalidatePath("/admin/recurring");
-  revalidatePath(`/jobs/${data.token}`);
+  revalidatePath(`/appointments/${data.token}`);
   return { ok: true };
 }
 

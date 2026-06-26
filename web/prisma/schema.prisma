@@ -19,6 +19,7 @@ enum QuoteStatus {
   QUOTED
   ACCEPTED
   DECLINED
+  EXPIRED
 }
 
 enum RecurringFrequency {
@@ -98,6 +99,7 @@ model Booking {
   stripeCheckoutSessionId String?
   invoiceNumber           String?
   invoiceHtml             String?
+  reviewRequestSentAt     DateTime?
   createdAt               DateTime      @default(now())
   updatedAt               DateTime      @updatedAt
 
@@ -141,6 +143,7 @@ model QuoteRequest {
   bookingId           String?     @unique
   quotedAt            DateTime?
   respondedAt         DateTime?
+  holdExpiresAt       DateTime?
   createdAt           DateTime    @default(now())
   updatedAt           DateTime    @updatedAt
 
@@ -148,6 +151,7 @@ model QuoteRequest {
 
   @@index([status])
   @@index([customerEmail])
+  @@index([holdExpiresAt])
 }
 
 model RecurringService {
@@ -160,9 +164,11 @@ model RecurringService {
   frequency       RecurringFrequency
   active          Boolean            @default(true)
   sourceBookingId String?            @unique
-  nextServiceDate DateTime?
-  lastServiceDate DateTime?
-  notes           String?
+  nextServiceDate      DateTime?
+  lastServiceDate      DateTime?
+  preferredStartTime   String?
+  preferredEndTime     String?
+  notes                String?
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt
 
@@ -185,9 +191,10 @@ model Customer {
 }
 
 model GalleryImage {
-  id        String   @id @default(cuid())
-  src       String
-  alt       String
+  id          String   @id @default(cuid())
+  src         String
+  storageKey  String?
+  alt         String
   category  String
   sortOrder Int      @default(0)
   published Boolean  @default(true)
@@ -266,6 +273,7 @@ model EmailSendLog {
 }
 
 model SiteSettings {
-  id                  String @id @default("default")
-  slotDurationMinutes Int    @default(180)
+  id                  String  @id @default("default")
+  slotDurationMinutes Int     @default(180)
+  googleReviewUrl     String?
 }

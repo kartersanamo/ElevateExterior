@@ -1,6 +1,6 @@
 "use client";
 
-import { sendQuote } from "@/lib/actions/quotes";
+import { sendQuote, releaseQuoteHold } from "@/lib/actions/quotes";
 import { services } from "@/lib/site-config";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
@@ -20,6 +20,7 @@ interface QuoteRow {
   proposedDate: string | null;
   proposedStartTime: string | null;
   proposedEndTime: string | null;
+  holdExpiresAt: string | null;
   createdAt: string;
 }
 
@@ -28,6 +29,7 @@ const STATUS_STYLES: Record<string, string> = {
   QUOTED: "bg-teal/10 text-teal",
   ACCEPTED: "bg-forest/10 text-forest",
   DECLINED: "bg-slate/10 text-slate/60",
+  EXPIRED: "bg-slate/10 text-slate/50",
 };
 
 function parseServiceIds(json: string): string[] {
@@ -165,6 +167,16 @@ export function QuoteManager({ quotes }: { quotes: QuoteRow[] }) {
                   Preferred: {formatPreferredTime(quote)}
                 </p>
               ) : null}
+              {quote.holdExpiresAt &&
+              (quote.status === "PENDING" || quote.status === "QUOTED") ? (
+                <p className="mt-1 text-xs text-amber-700">
+                  Hold expires{" "}
+                  {new Date(quote.holdExpiresAt).toLocaleString("en-US", {
+                    dateStyle: "short",
+                    timeStyle: "short",
+                  })}
+                </p>
+              ) : null}
               <p className="mt-2 line-clamp-2 text-sm text-slate/70">{quote.message}</p>
             </button>
           ))
@@ -283,6 +295,25 @@ export function QuoteManager({ quotes }: { quotes: QuoteRow[] }) {
                 className="rounded-lg bg-teal px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
               >
                 {pending ? "Sending…" : "Send quote to customer"}
+              </button>
+
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() =>
+                  startTransition(async () => {
+                    try {
+                      await releaseQuoteHold(active.id);
+                      setMessage("Slot hold released.");
+                      router.refresh();
+                    } catch (e) {
+                      setError(e instanceof Error ? e.message : "Could not release hold.");
+                    }
+                  })
+                }
+                className="ml-3 rounded-lg border border-amber-200 px-4 py-2 text-sm font-semibold text-amber-800"
+              >
+                Release hold
               </button>
             </div>
           ) : (

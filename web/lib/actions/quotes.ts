@@ -10,11 +10,35 @@ import {
 import { sendBookingConfirmedEmail } from "@/lib/booking-mail";
 import { bookingToEmailPayload, getSlotsForDate } from "@/lib/scheduling/slots";
 import { parseDollarsToCents } from "@/lib/recurring";
+import { generatePublicToken } from "@/lib/tokens";
 import { revalidatePath } from "next/cache";
 
 async function requireAdmin() {
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
+}
+
+function quoteHoldExpiry(days: number): Date {
+  const expires = new Date();
+  expires.setDate(expires.getDate() + days);
+  return expires;
+}
+
+async function validateQuoteSlot(
+  proposedDate: Date | null,
+  proposedStartTime: string | null,
+  proposedEndTime: string | null
+) {
+  if (!proposedDate || !proposedStartTime || !proposedEndTime) return;
+
+  const dateStr = proposedDate.toISOString().slice(0, 10);
+  const slots = await getSlotsForDate(dateStr);
+  const slotValid = slots.some(
+    (s) => s.startTime === proposedStartTime && s.endTime === proposedEndTime
+  );
+  if (!slotValid) {
+    throw new Error("That time slot is no longer available. Pick another time.");
+  }
 }
 
 export async function sendQuote(data: {
@@ -43,7 +67,14 @@ export async function sendQuote(data: {
   if (data.proposedDate) {
     const [y, m, d] = data.proposedDate.split("-").map(Number);
     proposedDate = new Date(Date.UTC(y, m - 1, d));
+  } else if (quote.proposedDate) {
+    proposedDate = quote.proposedDate;
   }
+
+  const proposedStartTime = data.proposedStartTime || quote.proposedStartTime;
+  const proposedEndTime = data.proposedEndTime || quote.proposedEndTime;
+
+  await validateQuoteSlot(proposedDate, proposedStartTime, proposedEndTime);
 
   const updated = await db.quoteRequest.update({
     where: { id: data.quoteId },
@@ -53,9 +84,10 @@ export async function sendQuote(data: {
       services: JSON.stringify(data.services),
       quoteNotes: data.quoteNotes?.trim() || null,
       proposedDate,
-      proposedStartTime: data.proposedStartTime || null,
-      proposedEndTime: data.proposedEndTime || null,
+      proposedStartTime: proposedStartTime || null,
+      proposedEndTime: proposedEndTime || null,
       quotedAt: new Date(),
+      holdExpiresAt: quoteHoldExpiry(7),
     },
   });
 
@@ -108,6 +140,7 @@ export async function acceptQuote(data: {
 
   const [y, m, d] = scheduledDateStr.split("-").map(Number);
   const scheduledDate = new Date(Date.UTC(y, m - 1, d));
+  const publicToken = generatePublicToken();
 
   const booking = await db.booking.create({
     data: {
@@ -124,6 +157,7 @@ export async function acceptQuote(data: {
       endTime,
       status: "CONFIRMED",
       amountChargedCents: quote.quotedAmountCents,
+      publicToken,
     },
   });
 
@@ -158,8 +192,9 @@ export async function acceptQuote(data: {
   revalidatePath("/admin/quotes");
   revalidatePath("/admin/bookings");
   revalidatePath(`/quote/${data.token}`);
+  revalidatePath(`/appointments/${publicToken}`);
 
-  return { ok: true, bookingId: booking.id };
+  return { ok: true, bookingId: booking.id, appointmentToken: publicToken };
 }
 
 export async function declineQuote(token: string) {
@@ -176,5 +211,30 @@ export async function declineQuote(token: string) {
 
   revalidatePath("/admin/quotes");
   revalidatePath(`/quote/${token}`);
+  return { ok: true };
+}
+
+export async function releaseQuoteHold(quoteId: string) {
+  await requireAdmin();
+
+  const quote = await db.quoteRequest.findUnique({ where: { id: quoteId } });
+  if (!quote) throw new Error("Quote not found.");
+  if (quote.status !== "PENDING" && quote.status !== "QUOTED") {
+    throw new Error("This quote hold cannot be released.");
+  }
+
+  await db.quoteRequest.update({
+    where: { id: quoteId },
+    data: {
+      status: "EXPIRED",
+      proposedDate: null,
+      proposedStartTime: null,
+      proposedEndTime: null,
+      holdExpiresAt: null,
+    },
+  });
+
+  revalidatePath("/admin/quotes");
+  revalidatePath("/admin/bookings");
   return { ok: true };
 }

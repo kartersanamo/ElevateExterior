@@ -4,7 +4,8 @@ import {
   getMailgunClient,
 } from "@/lib/mailgun";
 import { formatCents } from "@/lib/recurring";
-import { getSiteUrl } from "@/lib/stripe";
+import { sendSms } from "@/lib/sms";
+import { appointmentUrl } from "@/lib/urls";
 import { site } from "@/lib/site-config";
 import type { Booking } from "@prisma/client";
 
@@ -31,8 +32,8 @@ async function sendMail(options: {
   });
 }
 
-function jobUrl(token: string): string {
-  return `${getSiteUrl()}/jobs/${token}`;
+function jobPageUrl(token: string): string {
+  return appointmentUrl(token);
 }
 
 export async function sendJobCompletedEmail(booking: Booking): Promise<void> {
@@ -40,7 +41,7 @@ export async function sendJobCompletedEmail(booking: Booking): Promise<void> {
     throw new Error("Job is not ready for customer email.");
   }
 
-  const url = jobUrl(booking.publicToken);
+  const url = jobPageUrl(booking.publicToken);
   const amount = formatCents(booking.amountChargedCents);
   const payUrl = `${url}#pay`;
   const recurringUrl = `${url}#recurring`;
@@ -68,6 +69,11 @@ Set up recurring service: ${recurringUrl}
 <p><a href="${url}">View your job summary &amp; photos</a></p>
 <p>— ${site.name}</p>`,
   });
+
+  await sendSms({
+    to: booking.customerPhone,
+    body: `Your Elevate Exterior service is complete! View photos & pay: ${url}`,
+  });
 }
 
 export async function sendInvoiceEmail(
@@ -81,13 +87,13 @@ export async function sendInvoiceEmail(
 
 Thank you for your payment! Your invoice ${booking.invoiceNumber} is attached below.
 
-${booking.publicToken ? jobUrl(booking.publicToken) : ""}
+${booking.publicToken ? jobPageUrl(booking.publicToken) : ""}
 
 — ${site.name}`,
     html: `
 <p>Hi ${booking.customerName},</p>
 <p>Thank you for your payment! Here is your invoice <strong>${booking.invoiceNumber}</strong>.</p>
-${booking.publicToken ? `<p><a href="${jobUrl(booking.publicToken)}">View job summary</a></p>` : ""}
+${booking.publicToken ? `<p><a href="${jobPageUrl(booking.publicToken)}">View job summary</a></p>` : ""}
 <hr />
 ${invoiceHtml}`,
   });

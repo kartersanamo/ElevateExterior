@@ -39,7 +39,7 @@ export function Button({
 }: ButtonProps) {
   return (
     <button
-      className={`inline-flex items-center justify-center rounded-lg font-semibold uppercase transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-50 ${variants[variant]} ${sizes[size]} ${className}`}
+      className={`inline-flex min-h-11 touch-target items-center justify-center rounded-lg font-semibold uppercase transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-50 ${variants[variant]} ${sizes[size]} ${className}`}
       {...props}
     >
       {children}
@@ -64,7 +64,7 @@ export function ButtonLink({
   className = "",
   external = false,
 }: ButtonLinkProps) {
-  const classes = `inline-flex items-center justify-center rounded-lg font-semibold uppercase transition-all duration-300 ${variants[variant]} ${sizes[size]} ${className}`;
+  const classes = `inline-flex min-h-11 touch-target items-center justify-center rounded-lg font-semibold uppercase transition-all duration-300 ${variants[variant]} ${sizes[size]} ${className}`;
 
   if (external) {
     return (

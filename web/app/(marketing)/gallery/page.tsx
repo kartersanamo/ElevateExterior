@@ -9,7 +9,7 @@ export default async function GalleryPage() {
   const categories = await getGalleryCategories(images);
 
   return (
-    <div className="pt-24">
+    <div className="page-top">
       <section className="section-padding bg-white">
         <div className="mx-auto max-w-7xl">
           <SectionHeading

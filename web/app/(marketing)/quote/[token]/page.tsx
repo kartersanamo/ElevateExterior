@@ -24,7 +24,7 @@ export default async function PublicQuotePage({
   );
 
   return (
-    <div className="min-h-screen bg-mint/30 pt-24 pb-16">
+    <div className="min-h-screen-safe bg-mint/30 page-top pb-16 safe-bottom">
       <div className="mx-auto max-w-3xl px-6">
         <Link href="/" className="text-sm font-semibold text-teal hover:underline">
           ← {site.shortName}

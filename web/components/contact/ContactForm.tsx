@@ -32,8 +32,7 @@ export function ContactForm() {
   });
 
   const messageLength = watch("message")?.length ?? 0;
-  const inputClass =
-    "w-full rounded-lg border border-slate/20 bg-white px-4 py-3 text-slate focus:border-teal focus:outline-none focus:ring-1 focus:ring-teal";
+  const inputClass = "form-input";
 
   const onSubmit = async (data: ContactFormData) => {
     setStatus("loading");

@@ -38,6 +38,12 @@ const STATE_CONFIG = {
     admin:
       "bg-red-50 border-red-200 text-red-700 hover:bg-red-100 cursor-pointer",
   },
+  quote_hold: {
+    label: "Quote hold",
+    icon: Clock,
+    book: "bg-amber-50 border-amber-200 text-amber-800 cursor-not-allowed",
+    admin: "bg-amber-50 border-amber-200 text-amber-900 cursor-default",
+  },
   past: {
     label: "Past",
     icon: Clock,
@@ -129,7 +135,7 @@ export function DaySchedulePanel({
                   type="button"
                   disabled={!clickable || pending}
                   onClick={handleClick}
-                  className={`flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left text-sm transition-all ${config[mode]} ${
+                  className={`touch-target flex w-full min-h-11 items-center gap-3 rounded-xl border px-4 py-3 text-left text-sm transition-all ${config[mode]} ${
                     isSelected ? "ring-2 ring-teal ring-offset-1" : ""
                   } disabled:opacity-60`}
                 >
@@ -144,6 +150,9 @@ export function DaySchedulePanel({
                     ) : null}
                     {slot.state === "blocked" && slot.reason ? (
                       <p className="text-xs opacity-80">{slot.reason}</p>
+                    ) : null}
+                    {slot.state === "quote_hold" && slot.customerName ? (
+                      <p className="text-xs opacity-80">{slot.customerName}</p>
                     ) : null}
                     {slot.state === "available" && mode === "admin" ? (
                       <p className="text-xs opacity-60">Tap to block</p>

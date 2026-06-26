@@ -4,6 +4,7 @@ import {
   getMailgunClient,
 } from "@/lib/mailgun";
 import { formatCents } from "@/lib/recurring";
+import { sendSms } from "@/lib/sms";
 import { getSiteUrl } from "@/lib/stripe";
 import { site, services } from "@/lib/site-config";
 import type { QuoteRequest } from "@prisma/client";
@@ -185,6 +186,11 @@ ${quote.quoteNotes ? `<p>${quote.quoteNotes.replace(/\n/g, "<br />")}</p>` : ""}
   <a href="${url}" style="display:inline-block;background:#e67e22;color:#fff;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:700;">Review &amp; accept quote</a>
 </p>
 <p>— ${site.name}</p>`,
+  });
+
+  await sendSms({
+    to: quote.customerPhone,
+    body: `Your quote from ${site.shortName} is ready (${amount}). Review: ${url}`,
   });
 }
 

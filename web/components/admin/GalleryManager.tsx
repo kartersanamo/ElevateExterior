@@ -35,7 +35,9 @@ export function GalleryManager({
     alt: "",
     category: categories[0] ?? "",
     published: true,
+    storageKey: "" as string | undefined,
   });
+  const [uploading, setUploading] = useState(false);
 
   const run = (fn: () => Promise<unknown>) => {
     setError("");
@@ -63,8 +65,52 @@ export function GalleryManager({
       <section className="rounded-2xl border border-slate/10 bg-white p-6">
         <h2 className="font-display text-lg font-bold text-forest">Add image</h2>
         <p className="mt-1 text-sm text-slate/60">
-          Paste an image URL (your own hosted photos or a CDN link).
+          Upload from your phone or computer, or paste an image URL.
         </p>
+
+        <label className="mt-4 flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate/20 bg-slate/5 px-6 py-8 text-center hover:border-teal/40">
+          <span className="text-sm font-semibold text-forest">Choose photo</span>
+          <span className="mt-1 text-xs text-slate/50">JPEG, PNG, or WebP · max 10 MB</span>
+          <input
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="sr-only"
+            disabled={uploading || pending}
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              setUploading(true);
+              setError("");
+              try {
+                const body = new FormData();
+                body.append("file", file);
+                const res = await fetch("/api/admin/gallery/upload", {
+                  method: "POST",
+                  body,
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error ?? "Upload failed.");
+                setForm((f) => ({
+                  ...f,
+                  src: data.url,
+                  storageKey: data.storageKey,
+                  alt: f.alt || file.name.replace(/\.[^.]+$/, "").replace(/[-_]/g, " "),
+                }));
+                setMessage("Photo uploaded. Add alt text and category, then save.");
+              } catch (err) {
+                setError(err instanceof Error ? err.message : "Upload failed.");
+              } finally {
+                setUploading(false);
+                e.target.value = "";
+              }
+            }}
+          />
+        </label>
+        {uploading ? (
+          <p className="mt-2 text-sm text-slate/60">Uploading…</p>
+        ) : null}
+
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <label className="block text-sm sm:col-span-2">
             <span className="text-slate/60">Image URL</span>
@@ -114,8 +160,17 @@ export function GalleryManager({
           disabled={pending}
           onClick={() =>
             run(async () => {
-              await createGalleryImage(form);
-              setForm({ src: "", alt: "", category: form.category, published: true });
+              await createGalleryImage({
+                ...form,
+                storageKey: form.storageKey,
+              });
+              setForm({
+                src: "",
+                alt: "",
+                category: form.category,
+                published: true,
+                storageKey: undefined,
+              });
             })
           }
           className="mt-4 rounded-lg bg-teal px-4 py-2 text-sm font-semibold text-white hover:bg-teal/90 disabled:opacity-50"

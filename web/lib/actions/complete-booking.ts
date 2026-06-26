@@ -6,16 +6,12 @@ import { db } from "@/lib/db";
 import { sendJobCompletedEmail } from "@/lib/job-mail";
 import { parseDollarsToCents } from "@/lib/recurring";
 import { saveJobPhotos } from "@/lib/uploads";
+import { generatePublicToken } from "@/lib/tokens";
 import { revalidatePath } from "next/cache";
-import { randomBytes } from "crypto";
 
 async function requireAdmin() {
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
-}
-
-function generatePublicToken(): string {
-  return randomBytes(24).toString("base64url");
 }
 
 export async function completeBooking(bookingId: string, formData: FormData) {
@@ -89,7 +85,7 @@ export async function completeBooking(bookingId: string, formData: FormData) {
   revalidatePath("/admin/bookings");
   revalidatePath(`/admin/bookings/${bookingId}/complete`);
   revalidatePath(`/admin/jobs/${bookingId}`);
-  revalidatePath(`/jobs/${publicToken}`);
+  revalidatePath(`/appointments/${publicToken}`);
 
   return { ok: true, publicToken };
 }

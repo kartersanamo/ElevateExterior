@@ -76,3 +76,51 @@ export async function readJobPhoto(
   const safeName = path.basename(filename);
   return readFile(getJobPhotoPath(bookingId, safeName));
 }
+
+export function getGalleryDir(): string {
+  return path.join(getUploadsRoot(), "gallery");
+}
+
+export function getGalleryImagePath(storageKey: string): string {
+  return path.join(getGalleryDir(), path.basename(storageKey));
+}
+
+export async function saveGalleryImage(
+  file: File
+): Promise<{ storageKey: string; mimeType: string }> {
+  if (!(file instanceof File) || file.size === 0) {
+    throw new Error("Choose an image to upload.");
+  }
+  if (!ALLOWED_TYPES.has(file.type)) {
+    throw new Error("Photos must be JPEG, PNG, or WebP.");
+  }
+  if (file.size > MAX_BYTES) {
+    throw new Error("Each photo must be under 10 MB.");
+  }
+
+  const ext =
+    file.type === "image/png"
+      ? ".png"
+      : file.type === "image/webp"
+        ? ".webp"
+        : ".jpg";
+  const storageKey = `${randomUUID()}${ext}`;
+  const dir = getGalleryDir();
+  await mkdir(dir, { recursive: true });
+  const buffer = Buffer.from(await file.arrayBuffer());
+  await writeFile(getGalleryImagePath(storageKey), buffer);
+  return { storageKey, mimeType: file.type };
+}
+
+export async function readGalleryImage(storageKey: string): Promise<Buffer> {
+  return readFile(getGalleryImagePath(storageKey));
+}
+
+export async function deleteGalleryFile(storageKey: string): Promise<void> {
+  const { unlink } = await import("fs/promises");
+  try {
+    await unlink(getGalleryImagePath(storageKey));
+  } catch {
+    // file may already be gone
+  }
+}

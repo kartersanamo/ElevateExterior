@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function BookPage() {
   return (
-    <div className="pt-24">
+    <div className="page-top">
       <section className="section-padding bg-cream">
         <div className="mx-auto max-w-7xl">
           <SectionHeading
