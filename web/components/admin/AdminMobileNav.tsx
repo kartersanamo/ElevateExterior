@@ -1,6 +1,7 @@
 "use client";
 
-import Link from "next/link";
+import { AdminNavItem } from "@/components/admin/AdminNavItem";
+import { adminNavLinks } from "@/lib/admin-nav";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
@@ -17,17 +18,17 @@ import {
   X,
 } from "lucide-react";
 
-const links = [
-  { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
-  { href: "/admin/bookings", label: "Bookings", icon: ClipboardList },
-  { href: "/admin/quotes", label: "Quotes", icon: FileText },
-  { href: "/admin/customers", label: "Customers", icon: UserCircle },
-  { href: "/admin/recurring", label: "Recurring", icon: RefreshCw },
-  { href: "/admin/gallery", label: "Gallery", icon: ImageIcon },
-  { href: "/admin/emails", label: "Emails", icon: Mail },
-  { href: "/admin/team", label: "Team", icon: Users },
-  { href: "/admin/account", label: "Account", icon: KeyRound },
-];
+const icons = {
+  "/admin": LayoutDashboard,
+  "/admin/bookings": ClipboardList,
+  "/admin/quotes": FileText,
+  "/admin/customers": UserCircle,
+  "/admin/recurring": RefreshCw,
+  "/admin/gallery": ImageIcon,
+  "/admin/emails": Mail,
+  "/admin/team": Users,
+  "/admin/account": KeyRound,
+} as const;
 
 function isActive(pathname: string, href: string, exact?: boolean) {
   if (exact) return pathname === href;
@@ -90,22 +91,17 @@ export function AdminMobileNav() {
         aria-hidden={!open}
       >
         <ul className="grid grid-cols-2 gap-2 px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-          {links.map((link) => {
-            const Icon = link.icon;
+          {adminNavLinks.map((link) => {
+            const Icon = icons[link.href as keyof typeof icons];
             const active = isActive(pathname, link.href, link.exact);
             return (
               <li key={link.href}>
-                <Link
-                  href={link.href}
-                  className={`flex min-h-11 items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
-                    active
-                      ? "bg-mint text-forest"
-                      : "text-slate/70 hover:bg-slate/5 hover:text-forest"
-                  }`}
-                >
-                  <Icon size={16} className="shrink-0" aria-hidden />
-                  {link.label}
-                </Link>
+                <AdminNavItem
+                  link={link}
+                  icon={Icon}
+                  active={active}
+                  className="flex min-h-11 items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium"
+                />
               </li>
             );
           })}

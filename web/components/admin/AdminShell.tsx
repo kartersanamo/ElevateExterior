@@ -1,6 +1,8 @@
 import { AdminMobileNav } from "@/components/admin/AdminMobileNav";
+import { AdminNavItem } from "@/components/admin/AdminNavItem";
 import Link from "next/link";
 import { signOut } from "@/lib/auth";
+import { adminNavLinks } from "@/lib/admin-nav";
 import { site } from "@/lib/site-config";
 import {
   ClipboardList,
@@ -15,17 +17,17 @@ import {
   KeyRound,
 } from "lucide-react";
 
-const links = [
-  { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/admin/bookings", label: "Bookings", icon: ClipboardList },
-  { href: "/admin/quotes", label: "Quotes", icon: FileText },
-  { href: "/admin/customers", label: "Customers", icon: UserCircle },
-  { href: "/admin/recurring", label: "Recurring", icon: RefreshCw },
-  { href: "/admin/gallery", label: "Gallery", icon: ImageIcon },
-  { href: "/admin/emails", label: "Emails", icon: Mail },
-  { href: "/admin/team", label: "Team", icon: Users },
-  { href: "/admin/account", label: "Account", icon: KeyRound },
-];
+const icons = {
+  "/admin": LayoutDashboard,
+  "/admin/bookings": ClipboardList,
+  "/admin/quotes": FileText,
+  "/admin/customers": UserCircle,
+  "/admin/recurring": RefreshCw,
+  "/admin/gallery": ImageIcon,
+  "/admin/emails": Mail,
+  "/admin/team": Users,
+  "/admin/account": KeyRound,
+} as const;
 
 export function AdminShell({
   children,
@@ -76,17 +78,11 @@ export function AdminShell({
         {!mustChangePassword ? (
           <nav className="hidden w-48 shrink-0 md:block">
             <ul className="space-y-1">
-              {links.map((link) => {
-                const Icon = link.icon;
+              {adminNavLinks.map((link) => {
+                const Icon = icons[link.href as keyof typeof icons];
                 return (
                   <li key={link.href}>
-                    <Link
-                      href={link.href}
-                      className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-slate/70 hover:bg-white hover:text-forest"
-                    >
-                      <Icon size={16} aria-hidden />
-                      {link.label}
-                    </Link>
+                    <AdminNavItem link={link} icon={Icon} />
                   </li>
                 );
               })}
