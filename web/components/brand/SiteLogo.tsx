@@ -1,33 +1,40 @@
-import { Sparkles } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { site } from "@/lib/site-config";
 
 interface SiteLogoProps {
   linked?: boolean;
   className?: string;
+  /** @deprecated Logo image works on all backgrounds */
   light?: boolean;
+  size?: "sm" | "md" | "lg";
 }
+
+const heightClass = {
+  sm: "h-9",
+  md: "h-10 md:h-11",
+  lg: "h-12 md:h-14",
+} as const;
 
 export function SiteLogo({
   linked = false,
   className = "",
-  light = true,
+  size = "md",
 }: SiteLogoProps) {
-  const textClass = light ? "text-white" : "text-forest";
-  const accentClass = light ? "text-teal-light" : "text-teal";
-
   const content = (
-    <span className={`inline-flex items-center gap-2 font-display font-bold ${className}`}>
-      <Sparkles className={`h-6 w-6 shrink-0 ${accentClass}`} aria-hidden />
-      <span className={textClass}>
-        Elevate<span className={accentClass}>Exterior</span>
-      </span>
-    </span>
+    <Image
+      src="/logo.png"
+      alt={site.name}
+      width={1024}
+      height={845}
+      className={`w-auto object-contain ${heightClass[size]} ${className}`}
+      priority
+    />
   );
 
   if (linked) {
     return (
-      <Link href="/" aria-label={`${site.name} home`}>
+      <Link href="/" aria-label={`${site.name} home`} className="inline-flex shrink-0">
         {content}
       </Link>
     );

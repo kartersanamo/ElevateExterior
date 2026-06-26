@@ -23,8 +23,8 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: "cover",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#1a3a2f" },
-    { media: "(prefers-color-scheme: dark)", color: "#1a3a2f" },
+    { media: "(prefers-color-scheme: light)", color: "#013c83" },
+    { media: "(prefers-color-scheme: dark)", color: "#013c83" },
   ],
 };
 
@@ -37,8 +37,11 @@ export const metadata: Metadata = {
   description: site.description,
   manifest: "/manifest.json",
   icons: {
-    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
-    apple: [{ url: "/icon.svg", type: "image/svg+xml" }],
+    icon: [
+      { url: "/logo.png", type: "image/png" },
+      { url: "/icon.svg", type: "image/svg+xml" },
+    ],
+    apple: [{ url: "/logo.png", type: "image/png" }],
   },
   appleWebApp: {
     capable: true,

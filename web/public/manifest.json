@@ -4,14 +4,20 @@
   "description": "Professional pressure washing and soft washing in Greater Houston",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#1a3a2f",
-  "theme_color": "#14b8a6",
+  "background_color": "#013c83",
+  "theme_color": "#0098e3",
   "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "1024x845",
+      "type": "image/png",
+      "purpose": "any"
+    },
     {
       "src": "/icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "purpose": "maskable"
     }
   ]
 }

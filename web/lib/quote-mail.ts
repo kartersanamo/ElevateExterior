@@ -183,7 +183,7 @@ Review and accept: ${url}
 </ul>
 ${quote.quoteNotes ? `<p>${quote.quoteNotes.replace(/\n/g, "<br />")}</p>` : ""}
 <p style="margin:24px 0;">
-  <a href="${url}" style="display:inline-block;background:#e67e22;color:#fff;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:700;">Review &amp; accept quote</a>
+  <a href="${url}" style="display:inline-block;background:#0098e3;color:#fff;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:700;">Review &amp; accept quote</a>
 </p>
 <p>— ${site.name}</p>`,
   });

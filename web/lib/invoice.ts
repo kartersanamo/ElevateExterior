@@ -53,13 +53,13 @@ export function buildInvoiceHtml(
   <meta charset="utf-8" />
   <title>Invoice ${invoiceNumber}</title>
   <style>
-    body { font-family: system-ui, sans-serif; color: #1a2e1a; max-width: 640px; margin: 0 auto; padding: 32px 20px; }
+    body { font-family: system-ui, sans-serif; color: #013c83; max-width: 640px; margin: 0 auto; padding: 32px 20px; }
     h1 { font-size: 1.5rem; margin: 0 0 8px; }
-    .muted { color: #5a6b5a; font-size: 0.9rem; }
+    .muted { color: #5a718a; font-size: 0.9rem; }
     table { width: 100%; border-collapse: collapse; margin: 24px 0; }
-    th, td { text-align: left; padding: 10px 0; border-bottom: 1px solid #e8efe8; }
+    th, td { text-align: left; padding: 10px 0; border-bottom: 1px solid #d9e8f5; }
     .total { font-size: 1.25rem; font-weight: 700; }
-    .paid { color: #0d7a6f; font-weight: 600; }
+    .paid { color: #0098e3; font-weight: 600; }
   </style>
 </head>
 <body>

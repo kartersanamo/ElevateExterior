@@ -1,5 +1,6 @@
 "use client";
 
+import { SiteLogo } from "@/components/brand/SiteLogo";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
@@ -40,8 +41,9 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen-safe items-center justify-center bg-forest px-6 py-8 pt-[max(2rem,env(safe-area-inset-top))] pb-[max(2rem,env(safe-area-inset-bottom))]">
       <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-xl">
-        <h1 className="font-display text-2xl font-bold text-forest">
-          {site.shortName} Admin
+        <SiteLogo size="lg" className="mx-auto" />
+        <h1 className="mt-4 text-center font-display text-2xl font-bold text-forest">
+          Admin
         </h1>
         <p className="mt-2 text-sm text-slate/60">Sign in to manage bookings.</p>
 

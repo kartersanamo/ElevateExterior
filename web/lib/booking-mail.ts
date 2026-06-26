@@ -124,7 +124,7 @@ export async function sendBookingConfirmedEmail(
   const link = payload.publicToken ? appointmentUrl(payload.publicToken) : null;
   const linkText = link ? `\n\nManage your appointment: ${link}` : "";
   const linkHtml = link
-    ? `<p><a href="${link}" style="display:inline-block;background:#0d7a6f;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;">View your appointment</a></p>`
+    ? `<p><a href="${link}" style="display:inline-block;background:#0098e3;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;">View your appointment</a></p>`
     : "";
 
   await sendMail({

@@ -50,7 +50,7 @@ Your feedback helps our small business grow.
 <p>Hi ${booking.customerName},</p>
 <p>Thank you for choosing <strong>${site.name}</strong>! If you have a moment, we&apos;d love a Google review.</p>
 <p style="margin:24px 0;">
-  <a href="${reviewUrl}" style="display:inline-block;background:#e67e22;color:#fff;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:700;">Leave us a Google review</a>
+  <a href="${reviewUrl}" style="display:inline-block;background:#0098e3;color:#fff;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:700;">Leave us a Google review</a>
 </p>
 <p>Your feedback helps our small business grow.</p>
 <p>— ${site.name}</p>`,
