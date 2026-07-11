@@ -11,7 +11,6 @@ import { sendBookingConfirmedEmail } from "@/lib/booking-mail";
 import {
   bookingToEmailPayload,
   describeTimeSlotConflict,
-  getSlotsForDate,
 } from "@/lib/scheduling/slots";
 import { parseDollarsToCents } from "@/lib/recurring";
 import { findQuoteByLinkToken } from "@/lib/quote-lookup";
@@ -134,37 +133,48 @@ export async function sendQuote(data: {
   return { ok: true as const, token: updated.publicToken };
 }
 
+export type AcceptQuoteResult =
+  | { ok: true; bookingId: string; appointmentToken: string }
+  | { ok: false; error: string; needsNewSlot?: boolean };
+
 export async function acceptQuote(data: {
   token: string;
   scheduledDate?: string;
   startTime?: string;
   endTime?: string;
-}) {
+}): Promise<AcceptQuoteResult> {
   const quote = await findQuoteByLinkToken(data.token);
 
-  if (!quote) throw new Error("Quote not found.");
+  if (!quote) return { ok: false, error: "Quote not found." };
   if (quote.status !== "QUOTED") {
-    throw new Error("This quote is no longer available.");
+    return { ok: false, error: "This quote is no longer available." };
   }
   if (quote.bookingId) {
-    throw new Error("This quote has already been accepted.");
+    return { ok: false, error: "This quote has already been accepted." };
   }
 
   const serviceIds = JSON.parse(quote.services) as string[];
-  const scheduledDateStr = data.scheduledDate ?? quote.proposedDate?.toISOString().slice(0, 10);
-  const startTime = data.startTime ?? quote.proposedStartTime;
-  const endTime = data.endTime ?? quote.proposedEndTime;
+  const scheduledDateStr =
+    data.scheduledDate ?? quote.proposedDate?.toISOString().slice(0, 10);
+  const startTime = (data.startTime ?? quote.proposedStartTime)?.slice(0, 5);
+  const endTime = (data.endTime ?? quote.proposedEndTime)?.slice(0, 5);
 
   if (!scheduledDateStr || !startTime || !endTime) {
-    throw new Error("Please select a date and time to book.");
+    return { ok: false, error: "Please select a date and time to book." };
   }
 
-  const slots = await getSlotsForDate(scheduledDateStr, { excludeQuoteId: quote.id });
-  const slotValid = slots.some(
-    (s) => s.startTime === startTime && s.endTime === endTime
+  const conflict = await describeTimeSlotConflict(
+    scheduledDateStr,
+    startTime,
+    endTime,
+    { excludeQuoteId: quote.id, allowCustomRange: true }
   );
-  if (!slotValid) {
-    throw new Error("That time slot is no longer available. Please pick another.");
+  if (conflict) {
+    return {
+      ok: false,
+      error: "That time slot is no longer available. Please pick another.",
+      needsNewSlot: true,
+    };
   }
 
   const [y, m, d] = scheduledDateStr.split("-").map(Number);
@@ -223,7 +233,11 @@ export async function acceptQuote(data: {
   revalidatePath(`/quote/${quote.publicToken}`);
   revalidatePath(`/appointments/${publicToken}`);
 
-  return { ok: true, bookingId: booking.id, appointmentToken: publicToken };
+  return {
+    ok: true,
+    bookingId: booking.id,
+    appointmentToken: publicToken,
+  };
 }
 
 export async function declineQuote(token: string) {

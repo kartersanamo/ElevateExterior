@@ -96,17 +96,25 @@ export async function describeTimeSlotConflict(
   dateStr: string,
   startTime: string,
   endTime: string,
-  options?: { excludeBookingId?: string; excludeQuoteId?: string }
+  options?: {
+    excludeBookingId?: string;
+    excludeQuoteId?: string;
+    /** Allow arbitrary start/end times within business hours (e.g. admin-proposed quote slots). */
+    allowCustomRange?: boolean;
+  }
 ): Promise<string | null> {
   const normalizedStart = startTime.slice(0, 5);
   const normalizedEnd = endTime.slice(0, 5);
-  const slots = await getSlotsForDate(dateStr, options);
-  if (
-    slots.some(
-      (s) => s.startTime === normalizedStart && s.endTime === normalizedEnd
-    )
-  ) {
-    return null;
+
+  if (!options?.allowCustomRange) {
+    const slots = await getSlotsForDate(dateStr, options);
+    if (
+      slots.some(
+        (s) => s.startTime === normalizedStart && s.endTime === normalizedEnd
+      )
+    ) {
+      return null;
+    }
   }
 
   const start = parseTimeToMinutes(normalizedStart);
@@ -155,6 +163,10 @@ export async function describeTimeSlotConflict(
       return "This time overlaps with an existing booking.";
     }
     return "This time overlaps with another quote hold.";
+  }
+
+  if (options?.allowCustomRange) {
+    return null;
   }
 
   return "This time does not match an available slot.";

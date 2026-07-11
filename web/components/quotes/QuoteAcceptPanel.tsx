@@ -30,6 +30,7 @@ export function QuoteAcceptPanel({
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [needsNewSlot, setNeedsNewSlot] = useState(false);
   const [slot, setSlot] = useState<{
     date: string;
     startTime: string;
@@ -38,8 +39,8 @@ export function QuoteAcceptPanel({
     hasProposedSlot && proposedDate && proposedStartTime && proposedEndTime
       ? {
           date: proposedDate.slice(0, 10),
-          startTime: proposedStartTime,
-          endTime: proposedEndTime,
+          startTime: proposedStartTime.slice(0, 5),
+          endTime: proposedEndTime.slice(0, 5),
         }
       : null
   );
@@ -51,23 +52,27 @@ export function QuoteAcceptPanel({
 
   const accept = () => {
     setError("");
-    if (!hasProposedSlot && !slot) {
+    if ((!hasProposedSlot || needsNewSlot) && !slot) {
       setError("Please select a date and time.");
       return;
     }
     startTransition(async () => {
-      try {
-        await acceptQuote({
-          token,
-          scheduledDate: slot?.date,
-          startTime: slot?.startTime,
-          endTime: slot?.endTime,
-        });
-        setSuccess(true);
-        router.refresh();
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Could not accept quote.");
+      const result = await acceptQuote({
+        token,
+        scheduledDate: slot?.date,
+        startTime: slot?.startTime,
+        endTime: slot?.endTime,
+      });
+      if (!result.ok) {
+        setError(result.error);
+        if (result.needsNewSlot) {
+          setNeedsNewSlot(true);
+          setSlot(null);
+        }
+        return;
       }
+      setSuccess(true);
+      router.refresh();
     });
   };
 
@@ -102,9 +107,24 @@ export function QuoteAcceptPanel({
         ) : null}
       </section>
 
-      {!hasProposedSlot ? (
+      {hasProposedSlot && !needsNewSlot ? (
         <section className="rounded-2xl border border-slate/10 bg-white p-6 shadow-sm">
-          <h2 className="font-display text-lg font-bold text-forest">Pick a time</h2>
+          <h2 className="font-display text-lg font-bold text-forest">Proposed schedule</h2>
+          <p className="mt-2 text-sm">
+            {proposedDate?.slice(0, 10)} at {proposedStartTime?.slice(0, 5)} –{" "}
+            {proposedEndTime?.slice(0, 5)}
+          </p>
+        </section>
+      ) : (
+        <section className="rounded-2xl border border-slate/10 bg-white p-6 shadow-sm">
+          <h2 className="font-display text-lg font-bold text-forest">
+            {needsNewSlot ? "Pick a new time" : "Pick a time"}
+          </h2>
+          {needsNewSlot ? (
+            <p className="mt-2 text-sm text-slate/70">
+              The proposed time is no longer available. Choose another slot below.
+            </p>
+          ) : null}
           <CalendarScheduler
             mode="book"
             onSlotSelect={(date, s) => setSlot({ date, ...s })}
@@ -114,13 +134,6 @@ export function QuoteAcceptPanel({
               Selected: {slot.date} at {slot.startTime}
             </p>
           ) : null}
-        </section>
-      ) : (
-        <section className="rounded-2xl border border-slate/10 bg-white p-6 shadow-sm">
-          <h2 className="font-display text-lg font-bold text-forest">Proposed schedule</h2>
-          <p className="mt-2 text-sm">
-            {proposedDate?.slice(0, 10)} at {proposedStartTime} – {proposedEndTime}
-          </p>
         </section>
       )}
 
