@@ -1,6 +1,7 @@
 import { AdminCalendar } from "@/components/admin/AdminCalendar";
 import { AvailabilityManager } from "@/components/admin/AvailabilityManager";
 import { BookingActions } from "@/components/admin/BookingActions";
+import { ManualBookingDialog } from "@/components/admin/ManualBookingDialog";
 import { db } from "@/lib/db";
 import { services } from "@/lib/site-config";
 import type { BookingStatus } from "@prisma/client";
@@ -82,7 +83,10 @@ export default async function AdminBookingsPage({
 
   return (
     <div>
-      <h1 className="font-display text-3xl font-bold text-forest">Bookings</h1>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <h1 className="font-display text-3xl font-bold text-forest">Bookings</h1>
+        <ManualBookingDialog />
+      </div>
       <p className="mt-2 text-slate/70">
         Calendar, scheduling settings, and booking details in one place.
       </p>

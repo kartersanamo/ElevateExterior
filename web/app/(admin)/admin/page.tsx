@@ -1,4 +1,3 @@
-import { ManualBookingForm } from "@/components/admin/ManualBookingForm";
 import { db } from "@/lib/db";
 import { services } from "@/lib/site-config";
 import Link from "next/link";
@@ -100,10 +99,6 @@ export default async function AdminDashboardPage() {
   return (
     <div>
       <h1 className="font-display text-3xl font-bold text-forest">Dashboard</h1>
-
-      <div className="mt-6">
-        <ManualBookingForm />
-      </div>
 
       <section className="mt-8 rounded-2xl border border-teal/20 bg-teal/5 p-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
