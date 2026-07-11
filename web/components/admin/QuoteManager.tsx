@@ -2,9 +2,17 @@
 
 import { sendQuote, releaseQuoteHold } from "@/lib/actions/quotes";
 import { services } from "@/lib/site-config";
-import { CheckCircle, Copy, ExternalLink } from "lucide-react";
+import {
+  CheckCircle,
+  ChevronDown,
+  Clock,
+  Copy,
+  ExternalLink,
+  Mail,
+  MapPin,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 
 interface SentSuccess {
   customerName: string;
@@ -38,6 +46,14 @@ const STATUS_STYLES: Record<string, string> = {
   ACCEPTED: "bg-forest/10 text-forest",
   DECLINED: "bg-slate/10 text-slate/60",
   EXPIRED: "bg-slate/10 text-slate/50",
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  PENDING: "Pending review",
+  QUOTED: "Sent to customer",
+  ACCEPTED: "Accepted",
+  DECLINED: "Declined",
+  EXPIRED: "Expired",
 };
 
 function parseServiceIds(json: string): string[] {
@@ -105,15 +121,19 @@ function formatAmount(amount: string): string {
   return parsed.toLocaleString("en-US", { style: "currency", currency: "USD" });
 }
 
+function formatCreatedAt(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
 export function QuoteManager({ quotes }: { quotes: QuoteRow[] }) {
   const router = useRouter();
   const successRef = useRef<HTMLDivElement>(null);
   const [pending, startTransition] = useTransition();
-  const initialActiveId = useMemo(
-    () => quotes.find((q) => q.status === "PENDING")?.id ?? quotes[0]?.id ?? null,
-    [quotes]
-  );
-  const [activeId, setActiveId] = useState<string | null>(initialActiveId);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [sentSuccess, setSentSuccess] = useState<SentSuccess | null>(null);
@@ -128,14 +148,14 @@ export function QuoteManager({ quotes }: { quotes: QuoteRow[] }) {
     proposedEndTime: "",
   });
 
-  const active = quotes.find((q) => q.id === activeId);
+  const active = quotes.find((q) => q.id === expandedId);
 
   useEffect(() => {
-    const quote = quotes.find((q) => q.id === activeId);
+    const quote = quotes.find((q) => q.id === expandedId);
     if (quote) {
       setForm(buildFormFromQuote(quote));
     }
-  }, [activeId, quotes]);
+  }, [expandedId, quotes]);
 
   useEffect(() => {
     setError("");
@@ -143,10 +163,10 @@ export function QuoteManager({ quotes }: { quotes: QuoteRow[] }) {
     setSentSuccess(null);
     setSlotConflict(null);
     setCopied(false);
-  }, [activeId]);
+  }, [expandedId]);
 
-  const selectQuote = (quote: QuoteRow) => {
-    setActiveId(quote.id);
+  const toggleQuote = (quoteId: string) => {
+    setExpandedId((current) => (current === quoteId ? null : quoteId));
   };
 
   const toggleService = (id: string) => {
@@ -231,305 +251,438 @@ export function QuoteManager({ quotes }: { quotes: QuoteRow[] }) {
     }
   };
 
+  const pendingCount = quotes.filter((q) => q.status === "PENDING").length;
+  const quotedCount = quotes.filter((q) => q.status === "QUOTED").length;
+
   return (
-    <div className="mt-8 grid gap-8 lg:grid-cols-2">
-      <section className="space-y-3">
-        {quotes.length === 0 ? (
-          <p className="text-slate/60">No open quote requests.</p>
-        ) : (
-          quotes.map((quote) => (
-            <button
-              key={quote.id}
-              type="button"
-              onClick={() => selectQuote(quote)}
-              className={`w-full rounded-2xl border p-4 text-left transition-colors ${
-                activeId === quote.id
-                  ? "border-teal bg-teal/5"
-                  : "border-slate/10 bg-white hover:border-teal/30"
-              }`}
-            >
-              <div className="flex items-center justify-between gap-2">
-                <p className="font-semibold text-forest">{quote.customerName}</p>
-                <span
-                  className={`rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase ${STATUS_STYLES[quote.status] ?? ""}`}
-                >
-                  {quote.status}
-                </span>
-              </div>
-              <p className="mt-1 text-sm text-slate/60">{quote.customerEmail}</p>
-              <p className="mt-1 text-sm text-slate/70">{serviceSummary(quote.services)}</p>
-              {quote.address ? (
-                <p className="mt-1 text-sm text-slate/60">{quote.address}</p>
-              ) : null}
-              {formatPreferredTime(quote) ? (
-                <p className="mt-1 text-sm text-slate/60">
-                  Preferred: {formatPreferredTime(quote)}
-                </p>
-              ) : null}
-              {quote.holdExpiresAt &&
-              (quote.status === "PENDING" || quote.status === "QUOTED") ? (
-                <p className="mt-1 text-xs text-amber-700">
-                  Hold expires{" "}
-                  {new Date(quote.holdExpiresAt).toLocaleString("en-US", {
-                    dateStyle: "short",
-                    timeStyle: "short",
-                  })}
-                </p>
-              ) : null}
-            </button>
-          ))
-        )}
-      </section>
+    <div className="mt-8 space-y-6">
+      <div className="flex flex-wrap items-center gap-3 text-sm">
+        <span className="rounded-full bg-white px-3 py-1 font-semibold text-forest shadow-sm ring-1 ring-slate/10">
+          {quotes.length} open quote{quotes.length === 1 ? "" : "s"}
+        </span>
+        {pendingCount > 0 ? (
+          <span className="rounded-full bg-amber-100 px-3 py-1 font-semibold text-amber-800">
+            {pendingCount} pending review
+          </span>
+        ) : null}
+        {quotedCount > 0 ? (
+          <span className="rounded-full bg-teal/10 px-3 py-1 font-semibold text-teal">
+            {quotedCount} awaiting response
+          </span>
+        ) : null}
+      </div>
 
-      {active ? (
-        <section className="rounded-2xl border border-slate/10 bg-white p-6">
-          <h2 className="font-display text-lg font-bold text-forest">
-            Review &amp; send quote
-          </h2>
-          <p className="mt-1 text-sm text-slate/60">
-            Customer details are prefilled below. Adjust anything, add your price, then
-            send.
+      {quotes.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-slate/20 bg-white px-6 py-12 text-center">
+          <p className="font-display text-lg font-bold text-forest">No open quote requests</p>
+          <p className="mt-2 text-sm text-slate/60">
+            New requests from the Book Now flow will appear here.
           </p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {quotes.map((quote) => {
+            const isExpanded = expandedId === quote.id;
+            const preferredTime = formatPreferredTime(quote);
+            const showHold =
+              quote.holdExpiresAt &&
+              (quote.status === "PENDING" || quote.status === "QUOTED");
 
-          {sentSuccess ? (
-            <div
-              ref={successRef}
-              className="mt-4 rounded-2xl border-2 border-teal/40 bg-mint p-5 shadow-sm"
-              role="status"
-              aria-live="polite"
-            >
-              <div className="flex items-start gap-3">
-                <CheckCircle
-                  className="mt-0.5 shrink-0 text-teal"
-                  size={28}
-                  aria-hidden
-                />
-                <div className="min-w-0 flex-1">
-                  <p className="font-display text-lg font-bold text-forest">
-                    Quote sent to customer
-                  </p>
-                  <p className="mt-1 text-sm text-slate/70">
-                    <span className="font-semibold text-forest">
-                      {sentSuccess.customerName}
-                    </span>{" "}
-                    received an email at{" "}
-                    <span className="font-medium">{sentSuccess.customerEmail}</span>{" "}
-                    with a {formatAmount(sentSuccess.amount)} quote and link to review
-                    and accept.
-                  </p>
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    <a
-                      href={`/quote/${sentSuccess.token}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 rounded-lg bg-teal px-4 py-2 text-sm font-semibold text-white hover:bg-teal/90"
-                    >
-                      <ExternalLink size={16} aria-hidden />
-                      View customer quote page
-                    </a>
-                    <button
-                      type="button"
-                      onClick={() => copyQuoteLink(sentSuccess.token)}
-                      className="inline-flex items-center gap-2 rounded-lg border border-teal/30 bg-white px-4 py-2 text-sm font-semibold text-teal hover:bg-teal/5"
-                    >
-                      <Copy size={16} aria-hidden />
-                      {copied ? "Copied!" : "Copy quote link"}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ) : null}
-          {message ? (
-            <p className="mt-4 rounded-lg bg-mint px-4 py-2 text-sm text-forest">{message}</p>
-          ) : null}
-          {error ? (
-            <p className="mt-4 rounded-lg bg-red-50 px-4 py-2 text-sm text-red-800">{error}</p>
-          ) : null}
-
-          <div className="mt-6 rounded-xl border border-slate/10 bg-cream/60 p-4">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate/50">
-              Customer request
-            </h3>
-            <dl className="mt-3 space-y-2 text-sm">
-              <div>
-                <dt className="text-slate/50">Name</dt>
-                <dd className="font-medium text-forest">{active.customerName}</dd>
-              </div>
-              <div>
-                <dt className="text-slate/50">Email</dt>
-                <dd>{active.customerEmail}</dd>
-              </div>
-              {active.customerPhone ? (
-                <div>
-                  <dt className="text-slate/50">Phone</dt>
-                  <dd>{active.customerPhone}</dd>
-                </div>
-              ) : null}
-              {active.address ? (
-                <div>
-                  <dt className="text-slate/50">Address</dt>
-                  <dd>{active.address}</dd>
-                </div>
-              ) : null}
-              <div>
-                <dt className="text-slate/50">Services requested</dt>
-                <dd>{serviceSummary(active.services)}</dd>
-              </div>
-              {formatPreferredTime(active) ? (
-                <div>
-                  <dt className="text-slate/50">Preferred time</dt>
-                  <dd>{formatPreferredTime(active)}</dd>
-                </div>
-              ) : null}
-              {active.message ? (
-                <div>
-                  <dt className="text-slate/50">Notes</dt>
-                  <dd className="whitespace-pre-wrap text-slate/70">{active.message}</dd>
-                </div>
-              ) : null}
-            </dl>
-          </div>
-
-          {active.status === "PENDING" || active.status === "QUOTED" ? (
-            <div className="mt-6 space-y-4">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-slate/50">
-                Your quote
-              </h3>
-
-              <div>
-                <p className="text-sm font-semibold text-forest">Services</p>
-                <p className="mt-1 text-xs text-slate/50">
-                  Prefilled from the customer request — tap to change.
-                </p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {services.map((s) => (
-                    <button
-                      key={s.id}
-                      type="button"
-                      onClick={() => toggleService(s.id)}
-                      className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
-                        form.services.includes(s.id)
-                          ? "bg-teal text-white"
-                          : "bg-mint text-forest"
+            return (
+              <article
+                key={quote.id}
+                className={`overflow-hidden rounded-2xl border bg-white transition-shadow ${
+                  isExpanded
+                    ? "border-teal/40 shadow-md ring-1 ring-teal/10"
+                    : "border-slate/10 hover:border-teal/25 hover:shadow-sm"
+                }`}
+              >
+                <button
+                  type="button"
+                  onClick={() => toggleQuote(quote.id)}
+                  aria-expanded={isExpanded}
+                  className="w-full px-5 py-4 text-left"
+                >
+                  <div className="flex items-start gap-4">
+                    <div
+                      className={`mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors ${
+                        isExpanded ? "bg-teal text-white" : "bg-slate/5 text-slate/50"
                       }`}
                     >
-                      {s.title}
-                    </button>
-                  ))}
-                </div>
-              </div>
+                      <ChevronDown
+                        className={`h-4 w-4 transition-transform duration-200 ${
+                          isExpanded ? "rotate-180" : ""
+                        }`}
+                        aria-hidden
+                      />
+                    </div>
 
-              <label className="block text-sm">
-                <span className="font-semibold text-forest">
-                  Quote amount ($) <span className="text-red-600">*</span>
-                </span>
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  value={form.amount}
-                  onChange={(e) => setForm({ ...form, amount: e.target.value })}
-                  className="form-input mt-1"
-                  placeholder="250.00"
-                  required
-                />
-              </label>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <h2 className="font-display text-lg font-bold text-forest">
+                            {quote.customerName}
+                          </h2>
+                          <p className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate/60">
+                            <span className="inline-flex items-center gap-1">
+                              <Mail className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                              {quote.customerEmail}
+                            </span>
+                            <span className="text-slate/40">·</span>
+                            <span>Requested {formatCreatedAt(quote.createdAt)}</span>
+                          </p>
+                        </div>
 
-              <label className="block text-sm">
-                <span className="text-slate/60">Notes for customer (optional)</span>
-                <textarea
-                  rows={3}
-                  value={form.quoteNotes}
-                  onChange={(e) => setForm({ ...form, quoteNotes: e.target.value })}
-                  className="form-input mt-1"
-                  placeholder="Any details about scope, access, or timing…"
-                />
-              </label>
+                        <div className="flex flex-wrap items-center gap-2">
+                          {quote.quotedAmountCents ? (
+                            <span className="rounded-lg bg-forest/5 px-2.5 py-1 text-sm font-bold text-forest">
+                              {(quote.quotedAmountCents / 100).toLocaleString("en-US", {
+                                style: "currency",
+                                currency: "USD",
+                              })}
+                            </span>
+                          ) : null}
+                          <span
+                            className={`rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase ${STATUS_STYLES[quote.status] ?? "bg-slate/10 text-slate/60"}`}
+                          >
+                            {STATUS_LABELS[quote.status] ?? quote.status}
+                          </span>
+                        </div>
+                      </div>
 
-              <div>
-                <p className="text-sm font-semibold text-forest">Proposed schedule</p>
-                <p className="mt-1 text-xs text-slate/50">
-                  Prefilled from the customer&apos;s preferred time. Change if needed, or
-                  clear the date to let them pick when accepting.
-                </p>
-                <div className="mt-3 grid gap-3 sm:grid-cols-3">
-                  <label className="block text-sm sm:col-span-3">
-                    <span className="text-slate/60">Date</span>
-                    <input
-                      type="date"
-                      value={form.proposedDate}
-                      onChange={(e) => setForm({ ...form, proposedDate: e.target.value })}
-                      className="form-input mt-1"
-                    />
-                  </label>
-                  <label className="block text-sm">
-                    <span className="text-slate/60">Start</span>
-                    <input
-                      type="time"
-                      value={form.proposedStartTime}
-                      onChange={(e) =>
-                        setForm({ ...form, proposedStartTime: e.target.value })
-                      }
-                      className="form-input mt-1"
-                    />
-                  </label>
-                  <label className="block text-sm">
-                    <span className="text-slate/60">End</span>
-                    <input
-                      type="time"
-                      value={form.proposedEndTime}
-                      onChange={(e) =>
-                        setForm({ ...form, proposedEndTime: e.target.value })
-                      }
-                      className="form-input mt-1"
-                    />
-                  </label>
-                </div>
-              </div>
+                      <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-sm text-slate/70">
+                        <span>{serviceSummary(quote.services)}</span>
+                        {quote.address ? (
+                          <span className="inline-flex items-center gap-1">
+                            <MapPin className="h-3.5 w-3.5 shrink-0 text-slate/40" aria-hidden />
+                            {quote.address}
+                          </span>
+                        ) : null}
+                        {preferredTime ? (
+                          <span className="inline-flex items-center gap-1">
+                            <Clock className="h-3.5 w-3.5 shrink-0 text-slate/40" aria-hidden />
+                            {preferredTime}
+                          </span>
+                        ) : null}
+                      </div>
 
-              <div className="flex flex-wrap gap-3 pt-2">
-                <button
-                  type="button"
-                  disabled={pending}
-                  onClick={submitQuote}
-                  className="touch-target rounded-lg bg-teal px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
-                >
-                  {pending
-                    ? "Sending…"
-                    : active.status === "QUOTED"
-                      ? "Resend quote to customer"
-                      : "Send quote to customer"}
+                      {showHold ? (
+                        <p className="mt-2 text-xs font-medium text-amber-700">
+                          Slot hold expires{" "}
+                          {new Date(quote.holdExpiresAt!).toLocaleString("en-US", {
+                            dateStyle: "short",
+                            timeStyle: "short",
+                          })}
+                        </p>
+                      ) : null}
+                    </div>
+                  </div>
                 </button>
 
-                <button
-                  type="button"
-                  disabled={pending}
-                  onClick={() =>
-                    startTransition(async () => {
-                      try {
-                        await releaseQuoteHold(active.id);
-                        setMessage("Slot hold released.");
-                        router.refresh();
-                      } catch (e) {
-                        setError(
-                          e instanceof Error ? e.message : "Could not release hold."
-                        );
-                      }
-                    })
-                  }
-                  className="touch-target rounded-lg border border-amber-200 px-5 py-2.5 text-sm font-semibold text-amber-800"
-                >
-                  Release hold
-                </button>
-              </div>
-            </div>
-          ) : (
-            <p className="mt-6 text-sm text-slate/60">
-              This quote has been {active.status.toLowerCase()}.
-            </p>
-          )}
-        </section>
-      ) : null}
+                {isExpanded && active?.id === quote.id ? (
+                  <div className="border-t border-slate/10 bg-cream/30 px-5 py-6">
+                    <div className="mb-6">
+                      <h3 className="font-display text-lg font-bold text-forest">
+                        Review &amp; send quote
+                      </h3>
+                      <p className="mt-1 text-sm text-slate/60">
+                        Customer details are prefilled below. Adjust anything, add your
+                        price, then send.
+                      </p>
+                    </div>
+
+                    {sentSuccess ? (
+                      <div
+                        ref={successRef}
+                        className="mb-6 rounded-2xl border-2 border-teal/40 bg-mint p-5 shadow-sm"
+                        role="status"
+                        aria-live="polite"
+                      >
+                        <div className="flex items-start gap-3">
+                          <CheckCircle
+                            className="mt-0.5 shrink-0 text-teal"
+                            size={28}
+                            aria-hidden
+                          />
+                          <div className="min-w-0 flex-1">
+                            <p className="font-display text-lg font-bold text-forest">
+                              Quote sent to customer
+                            </p>
+                            <p className="mt-1 text-sm text-slate/70">
+                              <span className="font-semibold text-forest">
+                                {sentSuccess.customerName}
+                              </span>{" "}
+                              received an email at{" "}
+                              <span className="font-medium">{sentSuccess.customerEmail}</span>{" "}
+                              with a {formatAmount(sentSuccess.amount)} quote and link to
+                              review and accept.
+                            </p>
+                            <div className="mt-4 flex flex-wrap gap-2">
+                              <a
+                                href={`/quote/${sentSuccess.token}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-2 rounded-lg bg-teal px-4 py-2 text-sm font-semibold text-white hover:bg-teal/90"
+                              >
+                                <ExternalLink size={16} aria-hidden />
+                                View customer quote page
+                              </a>
+                              <button
+                                type="button"
+                                onClick={() => copyQuoteLink(sentSuccess.token)}
+                                className="inline-flex items-center gap-2 rounded-lg border border-teal/30 bg-white px-4 py-2 text-sm font-semibold text-teal hover:bg-teal/5"
+                              >
+                                <Copy size={16} aria-hidden />
+                                {copied ? "Copied!" : "Copy quote link"}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : null}
+
+                    {message ? (
+                      <p className="mb-4 rounded-lg bg-mint px-4 py-2 text-sm text-forest">
+                        {message}
+                      </p>
+                    ) : null}
+                    {error ? (
+                      <p className="mb-4 rounded-lg bg-red-50 px-4 py-2 text-sm text-red-800">
+                        {error}
+                      </p>
+                    ) : null}
+
+                    <div className="grid gap-6 lg:grid-cols-2">
+                      <div className="rounded-xl border border-slate/10 bg-white p-5">
+                        <h4 className="text-xs font-semibold uppercase tracking-wider text-slate/50">
+                          Customer request
+                        </h4>
+                        <dl className="mt-4 grid gap-4 sm:grid-cols-2">
+                          <div>
+                            <dt className="text-xs text-slate/50">Name</dt>
+                            <dd className="mt-0.5 font-medium text-forest">
+                              {active.customerName}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt className="text-xs text-slate/50">Email</dt>
+                            <dd className="mt-0.5">
+                              <a
+                                href={`mailto:${active.customerEmail}`}
+                                className="text-teal hover:underline"
+                              >
+                                {active.customerEmail}
+                              </a>
+                            </dd>
+                          </div>
+                          {active.customerPhone ? (
+                            <div>
+                              <dt className="text-xs text-slate/50">Phone</dt>
+                              <dd className="mt-0.5">
+                                <a
+                                  href={`tel:${active.customerPhone.replace(/\D/g, "")}`}
+                                  className="text-teal hover:underline"
+                                >
+                                  {active.customerPhone}
+                                </a>
+                              </dd>
+                            </div>
+                          ) : null}
+                          {active.address ? (
+                            <div className={active.customerPhone ? "" : "sm:col-span-2"}>
+                              <dt className="text-xs text-slate/50">Address</dt>
+                              <dd className="mt-0.5">{active.address}</dd>
+                            </div>
+                          ) : null}
+                          <div className="sm:col-span-2">
+                            <dt className="text-xs text-slate/50">Services requested</dt>
+                            <dd className="mt-0.5">{serviceSummary(active.services)}</dd>
+                          </div>
+                          {formatPreferredTime(active) ? (
+                            <div className="sm:col-span-2">
+                              <dt className="text-xs text-slate/50">Preferred time</dt>
+                              <dd className="mt-0.5">{formatPreferredTime(active)}</dd>
+                            </div>
+                          ) : null}
+                          {active.message ? (
+                            <div className="sm:col-span-2">
+                              <dt className="text-xs text-slate/50">Notes</dt>
+                              <dd className="mt-0.5 whitespace-pre-wrap rounded-lg bg-cream/60 p-3 text-sm text-slate/70">
+                                {active.message}
+                              </dd>
+                            </div>
+                          ) : null}
+                        </dl>
+                      </div>
+
+                      {active.status === "PENDING" || active.status === "QUOTED" ? (
+                        <div className="rounded-xl border border-slate/10 bg-white p-5">
+                          <h4 className="text-xs font-semibold uppercase tracking-wider text-slate/50">
+                            Your quote
+                          </h4>
+
+                          <div className="mt-4 space-y-4">
+                            <div>
+                              <p className="text-sm font-semibold text-forest">Services</p>
+                              <p className="mt-1 text-xs text-slate/50">
+                                Prefilled from the customer request — tap to change.
+                              </p>
+                              <div className="mt-2 flex flex-wrap gap-2">
+                                {services.map((s) => (
+                                  <button
+                                    key={s.id}
+                                    type="button"
+                                    onClick={() => toggleService(s.id)}
+                                    className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
+                                      form.services.includes(s.id)
+                                        ? "bg-teal text-white"
+                                        : "bg-mint text-forest hover:bg-teal/10"
+                                    }`}
+                                  >
+                                    {s.title}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+
+                            <label className="block text-sm">
+                              <span className="font-semibold text-forest">
+                                Quote amount ($){" "}
+                                <span className="text-red-600">*</span>
+                              </span>
+                              <input
+                                type="text"
+                                inputMode="decimal"
+                                value={form.amount}
+                                onChange={(e) =>
+                                  setForm({ ...form, amount: e.target.value })
+                                }
+                                className="form-input mt-1"
+                                placeholder="250.00"
+                                required
+                              />
+                            </label>
+
+                            <label className="block text-sm">
+                              <span className="text-slate/60">
+                                Notes for customer (optional)
+                              </span>
+                              <textarea
+                                rows={3}
+                                value={form.quoteNotes}
+                                onChange={(e) =>
+                                  setForm({ ...form, quoteNotes: e.target.value })
+                                }
+                                className="form-input mt-1"
+                                placeholder="Any details about scope, access, or timing…"
+                              />
+                            </label>
+
+                            <div>
+                              <p className="text-sm font-semibold text-forest">
+                                Proposed schedule
+                              </p>
+                              <p className="mt-1 text-xs text-slate/50">
+                                Prefilled from the customer&apos;s preferred time. Change if
+                                needed, or clear the date to let them pick when accepting.
+                              </p>
+                              <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                                <label className="block text-sm sm:col-span-3">
+                                  <span className="text-slate/60">Date</span>
+                                  <input
+                                    type="date"
+                                    value={form.proposedDate}
+                                    onChange={(e) =>
+                                      setForm({ ...form, proposedDate: e.target.value })
+                                    }
+                                    className="form-input mt-1"
+                                  />
+                                </label>
+                                <label className="block text-sm">
+                                  <span className="text-slate/60">Start</span>
+                                  <input
+                                    type="time"
+                                    value={form.proposedStartTime}
+                                    onChange={(e) =>
+                                      setForm({
+                                        ...form,
+                                        proposedStartTime: e.target.value,
+                                      })
+                                    }
+                                    className="form-input mt-1"
+                                  />
+                                </label>
+                                <label className="block text-sm">
+                                  <span className="text-slate/60">End</span>
+                                  <input
+                                    type="time"
+                                    value={form.proposedEndTime}
+                                    onChange={(e) =>
+                                      setForm({
+                                        ...form,
+                                        proposedEndTime: e.target.value,
+                                      })
+                                    }
+                                    className="form-input mt-1"
+                                  />
+                                </label>
+                              </div>
+                            </div>
+
+                            <div className="flex flex-wrap gap-3 border-t border-slate/10 pt-4">
+                              <button
+                                type="button"
+                                disabled={pending}
+                                onClick={submitQuote}
+                                className="touch-target rounded-lg bg-teal px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+                              >
+                                {pending
+                                  ? "Sending…"
+                                  : active.status === "QUOTED"
+                                    ? "Resend quote to customer"
+                                    : "Send quote to customer"}
+                              </button>
+
+                              <button
+                                type="button"
+                                disabled={pending}
+                                onClick={() =>
+                                  startTransition(async () => {
+                                    try {
+                                      await releaseQuoteHold(active.id);
+                                      setMessage("Slot hold released.");
+                                      router.refresh();
+                                    } catch (e) {
+                                      setError(
+                                        e instanceof Error
+                                          ? e.message
+                                          : "Could not release hold."
+                                      );
+                                    }
+                                  })
+                                }
+                                className="touch-target rounded-lg border border-amber-200 px-5 py-2.5 text-sm font-semibold text-amber-800"
+                              >
+                                Release hold
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center rounded-xl border border-slate/10 bg-white p-5">
+                          <p className="text-sm text-slate/60">
+                            This quote has been {active.status.toLowerCase()}.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : null}
+              </article>
+            );
+          })}
+        </div>
+      )}
 
       {slotConflict ? (
         <div
@@ -554,8 +707,8 @@ export function QuoteManager({ quotes }: { quotes: QuoteRow[] }) {
             </h3>
             <p className="mt-3 text-sm text-slate/70">{slotConflict}</p>
             <p className="mt-2 text-sm text-slate/70">
-              The customer will still receive the quote with this proposed time.
-              Send anyway?
+              The customer will still receive the quote with this proposed time. Send
+              anyway?
             </p>
             <div className="mt-6 flex flex-wrap justify-end gap-3">
               <button
