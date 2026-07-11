@@ -222,7 +222,7 @@ export async function sendQuoteAcceptedEmails(
   const recipients = await getAdminNotificationRecipients("QUOTE_ACCEPTED");
   if (recipients.length === 0) return;
 
-  const adminUrl = `${getSiteUrl()}/admin/quotes`;
+  const adminUrl = `${getSiteUrl()}/admin/bookings`;
   const rows = quoteDetailRows(quote);
 
   const html = wrapBrandedContent(
