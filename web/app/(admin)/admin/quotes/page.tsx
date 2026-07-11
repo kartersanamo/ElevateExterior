@@ -5,6 +5,7 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminQuotesPage() {
   const quotes = await db.quoteRequest.findMany({
+    where: { status: { in: ["PENDING", "QUOTED"] } },
     orderBy: { createdAt: "desc" },
     take: 100,
   });

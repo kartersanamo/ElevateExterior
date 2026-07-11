@@ -214,7 +214,7 @@ export function QuoteManager({ quotes }: { quotes: QuoteRow[] }) {
     <div className="mt-8 grid gap-8 lg:grid-cols-2">
       <section className="space-y-3">
         {quotes.length === 0 ? (
-          <p className="text-slate/60">No quote requests yet.</p>
+          <p className="text-slate/60">No open quote requests.</p>
         ) : (
           quotes.map((quote) => (
             <button
