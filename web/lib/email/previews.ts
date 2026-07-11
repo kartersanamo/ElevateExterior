@@ -78,6 +78,8 @@ const sampleBookingRecord: Booking = {
   reviewDiscountClaimedAt: null,
   reviewDiscountRedeemedAt: null,
   stripeCheckoutSessionId: null,
+  stripeProductId: null,
+  stripePriceId: null,
   notes: null,
   createdAt: new Date(),
   updatedAt: new Date(),

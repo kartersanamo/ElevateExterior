@@ -17,7 +17,6 @@ interface QuoteRow {
   id: string;
   publicToken: string;
   status: string;
-  source: string;
   customerName: string;
   customerEmail: string;
   customerPhone: string | null;
@@ -40,23 +39,6 @@ const STATUS_STYLES: Record<string, string> = {
   DECLINED: "bg-slate/10 text-slate/60",
   EXPIRED: "bg-slate/10 text-slate/50",
 };
-
-const SOURCE_STYLES: Record<string, string> = {
-  angi: "bg-orange-100 text-orange-800",
-  website: "bg-slate/10 text-slate/70",
-};
-
-function quoteSourceLabel(source: string): string {
-  if (source === "angi") return "Angi";
-  return "Website";
-}
-
-function preferredTimeLabel(quote: QuoteRow): string {
-  const formatted = formatPreferredTime(quote);
-  if (formatted) return formatted;
-  if (quote.source === "angi") return "Schedule when quoting";
-  return "Not specified";
-}
 
 function parseServiceIds(json: string): string[] {
   try {
@@ -247,27 +229,20 @@ export function QuoteManager({ quotes }: { quotes: QuoteRow[] }) {
             >
               <div className="flex items-center justify-between gap-2">
                 <p className="font-semibold text-forest">{quote.customerName}</p>
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase ${SOURCE_STYLES[quote.source] ?? SOURCE_STYLES.website}`}
-                  >
-                    {quoteSourceLabel(quote.source)}
-                  </span>
-                  <span
-                    className={`rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase ${STATUS_STYLES[quote.status] ?? ""}`}
-                  >
-                    {quote.status}
-                  </span>
-                </div>
+                <span
+                  className={`rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase ${STATUS_STYLES[quote.status] ?? ""}`}
+                >
+                  {quote.status}
+                </span>
               </div>
               <p className="mt-1 text-sm text-slate/60">{quote.customerEmail}</p>
               <p className="mt-1 text-sm text-slate/70">{serviceSummary(quote.services)}</p>
               {quote.address ? (
                 <p className="mt-1 text-sm text-slate/60">{quote.address}</p>
               ) : null}
-              {formatPreferredTime(quote) || quote.source === "angi" ? (
+              {formatPreferredTime(quote) ? (
                 <p className="mt-1 text-sm text-slate/60">
-                  Preferred: {preferredTimeLabel(quote)}
+                  Preferred: {formatPreferredTime(quote)}
                 </p>
               ) : null}
               {quote.holdExpiresAt &&
@@ -357,10 +332,6 @@ export function QuoteManager({ quotes }: { quotes: QuoteRow[] }) {
             </h3>
             <dl className="mt-3 space-y-2 text-sm">
               <div>
-                <dt className="text-slate/50">Source</dt>
-                <dd className="font-medium text-forest">{quoteSourceLabel(active.source)}</dd>
-              </div>
-              <div>
                 <dt className="text-slate/50">Name</dt>
                 <dd className="font-medium text-forest">{active.customerName}</dd>
               </div>
@@ -384,10 +355,10 @@ export function QuoteManager({ quotes }: { quotes: QuoteRow[] }) {
                 <dt className="text-slate/50">Services requested</dt>
                 <dd>{serviceSummary(active.services)}</dd>
               </div>
-              {formatPreferredTime(active) || active.source === "angi" ? (
+              {formatPreferredTime(active) ? (
                 <div>
                   <dt className="text-slate/50">Preferred time</dt>
-                  <dd>{preferredTimeLabel(active)}</dd>
+                  <dd>{formatPreferredTime(active)}</dd>
                 </div>
               ) : null}
               {active.message ? (

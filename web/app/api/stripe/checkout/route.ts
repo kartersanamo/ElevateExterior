@@ -1,3 +1,4 @@
+import { ensureBookingCheckoutPrice } from "@/lib/booking-checkout";
 import { db } from "@/lib/db";
 import { getSiteUrl, getStripe, isStripeConfigured } from "@/lib/stripe";
 import { NextRequest, NextResponse } from "next/server";
@@ -33,6 +34,7 @@ export async function POST(request: NextRequest) {
 
     const siteUrl = getSiteUrl();
     const stripe = getStripe();
+    const priceId = await ensureBookingCheckoutPrice(booking);
 
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
@@ -40,14 +42,7 @@ export async function POST(request: NextRequest) {
       line_items: [
         {
           quantity: 1,
-          price_data: {
-            currency: "usd",
-            unit_amount: booking.amountChargedCents,
-            product_data: {
-              name: `Exterior cleaning — ${booking.customerName}`,
-              description: `Service on ${booking.scheduledDate.toISOString().slice(0, 10)}`,
-            },
-          },
+          price: priceId,
         },
       ],
       metadata: { bookingId: booking.id, publicToken: token },

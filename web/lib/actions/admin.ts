@@ -10,6 +10,8 @@ import { db } from "@/lib/db";
 import { runAutomationForBooking } from "@/lib/email/send";
 import { auth } from "@/lib/auth";
 import { bookingToEmailPayload } from "@/lib/scheduling/slots";
+import { generatePublicToken } from "@/lib/tokens";
+import { manualBookingSchema } from "@/lib/validators/contact";
 import type { BookingStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
@@ -64,6 +66,77 @@ export async function updateBookingStatus(
   revalidatePath("/admin");
   revalidatePath("/admin/bookings");
   return { ok: true };
+}
+
+export async function createManualBooking(data: {
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  address: string;
+  services: string[];
+  notes?: string;
+  scheduledDate: string;
+  startTime: string;
+  endTime: string;
+}) {
+  await requireAdmin();
+
+  const parsed = manualBookingSchema.safeParse(data);
+  if (!parsed.success) {
+    const first = parsed.error.errors[0]?.message;
+    throw new Error(first ?? "Invalid booking data.");
+  }
+
+  const input = parsed.data;
+  const [y, m, d] = input.scheduledDate.split("-").map(Number);
+  const scheduledDate = new Date(Date.UTC(y, m - 1, d));
+  const publicToken = generatePublicToken();
+
+  const booking = await db.booking.create({
+    data: {
+      customerName: input.customerName.trim(),
+      customerEmail: input.customerEmail.trim().toLowerCase(),
+      customerPhone: input.customerPhone.trim(),
+      address: input.address.trim(),
+      services: JSON.stringify(input.services),
+      notes: input.notes?.trim() || null,
+      scheduledDate,
+      startTime: input.startTime,
+      endTime: input.endTime,
+      status: "CONFIRMED",
+      publicToken,
+    },
+  });
+
+  try {
+    await upsertCustomer({
+      email: booking.customerEmail,
+      name: booking.customerName,
+      phone: booking.customerPhone,
+      address: booking.address,
+      source: "booking",
+    });
+  } catch (error) {
+    console.error("Customer upsert error:", error);
+  }
+
+  const payload = bookingToEmailPayload(booking);
+
+  try {
+    await sendBookingConfirmedEmail(payload);
+    await runAutomationForBooking("ON_BOOKING_CONFIRMED", booking);
+  } catch (error) {
+    console.error("Manual booking email error:", error);
+    throw new Error(
+      "Booking saved but confirmation email could not be sent. Check Mailgun settings."
+    );
+  }
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/bookings");
+  revalidatePath(`/appointments/${publicToken}`);
+
+  return { ok: true, bookingId: booking.id };
 }
 
 export async function updateAvailabilityRule(

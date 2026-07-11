@@ -119,6 +119,8 @@ model Booking {
   completedAt             DateTime?
   paidAt                  DateTime?
   stripeCheckoutSessionId String?
+  stripeProductId         String?
+  stripePriceId           String?
   invoiceNumber           String?
   invoiceHtml             String?
   reviewRequestSentAt     DateTime?
@@ -154,8 +156,6 @@ model QuoteRequest {
   id                  String      @id @default(cuid())
   publicToken         String      @unique @default(cuid())
   status              QuoteStatus @default(PENDING)
-  source              String      @default("website")
-  externalLeadId      String?     @unique
   customerName        String
   customerEmail       String
   customerPhone       String?
@@ -179,7 +179,6 @@ model QuoteRequest {
   @@index([status])
   @@index([customerEmail])
   @@index([holdExpiresAt])
-  @@index([source])
 }
 
 model RecurringService {

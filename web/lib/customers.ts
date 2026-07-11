@@ -5,7 +5,7 @@ export async function upsertCustomer(data: {
   name: string;
   phone?: string | null;
   address?: string | null;
-  source: "booking" | "contact" | "quote" | "angi";
+  source: "booking" | "contact" | "quote";
 }) {
   const email = data.email.trim().toLowerCase();
 

@@ -1,18 +1,9 @@
+import { ManualBookingForm } from "@/components/admin/ManualBookingForm";
 import { db } from "@/lib/db";
 import { services } from "@/lib/site-config";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
-
-function quoteSourceLabel(source: string): string {
-  if (source === "angi") return "Angi";
-  return "Website";
-}
-
-function quoteSourceBadgeClass(source: string): string {
-  if (source === "angi") return "bg-orange-100 text-orange-800";
-  return "bg-slate/10 text-slate/70";
-}
 
 function formatDate(date: Date): string {
   return date.toLocaleDateString("en-US", {
@@ -110,7 +101,11 @@ export default async function AdminDashboardPage() {
     <div>
       <h1 className="font-display text-3xl font-bold text-forest">Dashboard</h1>
 
-      <section className="mt-6 rounded-2xl border border-teal/20 bg-teal/5 p-5">
+      <div className="mt-6">
+        <ManualBookingForm />
+      </div>
+
+      <section className="mt-8 rounded-2xl border border-teal/20 bg-teal/5 p-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-display text-lg font-bold text-forest">
             Next 5 jobs
@@ -241,14 +236,7 @@ export default async function AdminDashboardPage() {
                 key={q.id}
                 className="rounded-xl border border-amber-200 bg-amber-50 p-4"
               >
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="font-semibold text-forest">{q.customerName}</p>
-                  <span
-                    className={`rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase ${quoteSourceBadgeClass(q.source)}`}
-                  >
-                    {quoteSourceLabel(q.source)}
-                  </span>
-                </div>
+                <p className="font-semibold text-forest">{q.customerName}</p>
                 <p className="text-sm text-slate/70">
                   {q.address ?? "No address"} · {q.customerEmail}
                 </p>
@@ -256,10 +244,6 @@ export default async function AdminDashboardPage() {
                   <p className="mt-1 text-sm text-slate/60">
                     Preferred: {formatDate(q.proposedDate)} at{" "}
                     {formatTime(q.proposedStartTime)}
-                  </p>
-                ) : q.source === "angi" ? (
-                  <p className="mt-1 text-sm text-slate/60">
-                    Preferred: Schedule when quoting
                   </p>
                 ) : null}
               </li>

@@ -35,6 +35,20 @@ export const quoteRequestSchema = z.object({
 
 export type QuoteRequestFormData = z.infer<typeof quoteRequestSchema>;
 
+export const manualBookingSchema = z.object({
+  customerName: z.string().min(2, "Name is required").max(120),
+  customerEmail: z.string().email("Valid email required"),
+  customerPhone: z.string().min(7, "Phone is required").max(30),
+  address: z.string().min(5, "Address is required").max(300),
+  services: z.array(z.string()).min(1, "Select at least one service"),
+  notes: z.string().max(1000).optional().or(z.literal("")),
+  scheduledDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Pick a date"),
+  startTime: z.string().regex(/^\d{2}:\d{2}$/, "Pick a start time"),
+  endTime: z.string().regex(/^\d{2}:\d{2}$/, "Pick an end time"),
+});
+
+export type ManualBookingFormData = z.infer<typeof manualBookingSchema>;
+
 /** @deprecated Use quoteRequestSchema */
 export const bookingSchema = quoteRequestSchema;
 /** @deprecated Use QuoteRequestFormData */
