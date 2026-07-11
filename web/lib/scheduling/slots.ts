@@ -92,6 +92,74 @@ async function getBlockedRangesForDate(
   ];
 }
 
+export async function describeTimeSlotConflict(
+  dateStr: string,
+  startTime: string,
+  endTime: string,
+  options?: { excludeBookingId?: string; excludeQuoteId?: string }
+): Promise<string | null> {
+  const normalizedStart = startTime.slice(0, 5);
+  const normalizedEnd = endTime.slice(0, 5);
+  const slots = await getSlotsForDate(dateStr, options);
+  if (
+    slots.some(
+      (s) => s.startTime === normalizedStart && s.endTime === normalizedEnd
+    )
+  ) {
+    return null;
+  }
+
+  const start = parseTimeToMinutes(normalizedStart);
+  const end = parseTimeToMinutes(normalizedEnd);
+  if (end <= start) {
+    return "End time must be after start time.";
+  }
+
+  const date = parseDateOnly(dateStr);
+  const local = new Date(
+    date.getUTCFullYear(),
+    date.getUTCMonth(),
+    date.getUTCDate()
+  );
+  const dayOfWeek = local.getDay();
+
+  const rule = await db.availabilityRule.findFirst({
+    where: { dayOfWeek, enabled: true },
+  });
+  if (!rule) {
+    return "You are not available on this day of the week.";
+  }
+
+  const blockedDate = await db.blockedDate.findUnique({
+    where: { date: parseDateOnly(dateStr) },
+  });
+  if (blockedDate) {
+    return "This date is blocked on your calendar.";
+  }
+
+  const windowStart = parseTimeToMinutes(rule.startTime);
+  const windowEnd = parseTimeToMinutes(rule.endTime);
+  if (start < windowStart || end > windowEnd) {
+    return "This time is outside your regular availability hours.";
+  }
+
+  const occupied = await getBlockedRangesForDate(dateStr, options);
+  const overlap = occupied.find((r) =>
+    rangesOverlap(start, end, r.start, r.end)
+  );
+  if (overlap) {
+    if (overlap.kind === "block") {
+      return "This time overlaps with a blocked slot on your availability.";
+    }
+    if (overlap.kind === "booking") {
+      return "This time overlaps with an existing booking.";
+    }
+    return "This time overlaps with another quote hold.";
+  }
+
+  return "This time does not match an available slot.";
+}
+
 export async function getSlotsForDate(
   dateStr: string,
   options?: { excludeBookingId?: string; excludeQuoteId?: string }

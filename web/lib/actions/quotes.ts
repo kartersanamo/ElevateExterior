@@ -8,7 +8,11 @@ import {
   sendQuoteToCustomer,
 } from "@/lib/quote-mail";
 import { sendBookingConfirmedEmail } from "@/lib/booking-mail";
-import { bookingToEmailPayload, getSlotsForDate } from "@/lib/scheduling/slots";
+import {
+  bookingToEmailPayload,
+  describeTimeSlotConflict,
+  getSlotsForDate,
+} from "@/lib/scheduling/slots";
 import { parseDollarsToCents } from "@/lib/recurring";
 import { generatePublicToken } from "@/lib/tokens";
 import { revalidatePath } from "next/cache";
@@ -24,23 +28,9 @@ function quoteHoldExpiry(days: number): Date {
   return expires;
 }
 
-async function validateQuoteSlot(
-  proposedDate: Date | null,
-  proposedStartTime: string | null,
-  proposedEndTime: string | null,
-  quoteId: string
-) {
-  if (!proposedDate || !proposedStartTime || !proposedEndTime) return;
-
-  const dateStr = proposedDate.toISOString().slice(0, 10);
-  const slots = await getSlotsForDate(dateStr, { excludeQuoteId: quoteId });
-  const slotValid = slots.some(
-    (s) => s.startTime === proposedStartTime && s.endTime === proposedEndTime
-  );
-  if (!slotValid) {
-    throw new Error("That time slot is no longer available. Pick another time.");
-  }
-}
+export type SendQuoteResult =
+  | { ok: true; token: string }
+  | { ok: false; needsConfirmation: true; message: string };
 
 export async function sendQuote(data: {
   quoteId: string;
@@ -50,7 +40,8 @@ export async function sendQuote(data: {
   proposedDate?: string;
   proposedStartTime?: string;
   proposedEndTime?: string;
-}) {
+  confirmUnavailableSlot?: boolean;
+}): Promise<SendQuoteResult> {
   await requireAdmin();
 
   const quote = await db.quoteRequest.findUnique({ where: { id: data.quoteId } });
@@ -85,17 +76,35 @@ export async function sendQuote(data: {
     proposedDate = quote.proposedDate;
   }
 
-  const proposedStartTime =
-    data.proposedStartTime || quote.proposedStartTime || null;
-  const proposedEndTime =
-    data.proposedEndTime || quote.proposedEndTime || null;
+  const proposedStartTime = (
+    data.proposedStartTime ||
+    quote.proposedStartTime ||
+    null
+  )?.slice(0, 5) ?? null;
+  const proposedEndTime = (
+    data.proposedEndTime ||
+    quote.proposedEndTime ||
+    null
+  )?.slice(0, 5) ?? null;
 
-  await validateQuoteSlot(
-    proposedDate,
-    proposedStartTime,
-    proposedEndTime,
-    data.quoteId
-  );
+  if (proposedDate && proposedStartTime && proposedEndTime) {
+    const dateStr = proposedDate.toISOString().slice(0, 10);
+    const conflictMessage = await describeTimeSlotConflict(
+      dateStr,
+      proposedStartTime,
+      proposedEndTime,
+      { excludeQuoteId: data.quoteId }
+    );
+
+    if (conflictMessage) {
+      if (conflictMessage === "End time must be after start time.") {
+        throw new Error(conflictMessage);
+      }
+      if (!data.confirmUnavailableSlot) {
+        return { ok: false, needsConfirmation: true, message: conflictMessage };
+      }
+    }
+  }
 
   const updated = await db.quoteRequest.update({
     where: { id: data.quoteId },
@@ -121,7 +130,7 @@ export async function sendQuote(data: {
 
   revalidatePath("/admin/quotes");
   revalidatePath(`/quote/${updated.publicToken}`);
-  return { ok: true, token: updated.publicToken };
+  return { ok: true as const, token: updated.publicToken };
 }
 
 export async function acceptQuote(data: {

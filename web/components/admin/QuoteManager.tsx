@@ -117,6 +117,7 @@ export function QuoteManager({ quotes }: { quotes: QuoteRow[] }) {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [sentSuccess, setSentSuccess] = useState<SentSuccess | null>(null);
+  const [slotConflict, setSlotConflict] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [form, setForm] = useState({
     amount: "",
@@ -140,6 +141,7 @@ export function QuoteManager({ quotes }: { quotes: QuoteRow[] }) {
     setError("");
     setMessage("");
     setSentSuccess(null);
+    setSlotConflict(null);
     setCopied(false);
   }, [activeId]);
 
@@ -156,6 +158,53 @@ export function QuoteManager({ quotes }: { quotes: QuoteRow[] }) {
     }));
   };
 
+  const sendQuoteRequest = (confirmUnavailableSlot = false) => {
+    if (!active) return;
+
+    setError("");
+    setMessage("");
+    setSentSuccess(null);
+    setCopied(false);
+    if (!confirmUnavailableSlot) {
+      setSlotConflict(null);
+    }
+
+    startTransition(async () => {
+      try {
+        const result = await sendQuote({
+          quoteId: active.id,
+          amount: form.amount,
+          services: form.services,
+          quoteNotes: form.quoteNotes,
+          proposedDate: form.proposedDate || undefined,
+          proposedStartTime: form.proposedStartTime || undefined,
+          proposedEndTime: form.proposedEndTime || undefined,
+          confirmUnavailableSlot,
+        });
+
+        if (!result.ok) {
+          setSlotConflict(result.message);
+          return;
+        }
+
+        setSlotConflict(null);
+        setSentSuccess({
+          customerName: active.customerName,
+          customerEmail: active.customerEmail,
+          amount: form.amount,
+          token: result.token,
+        });
+        router.refresh();
+        requestAnimationFrame(() => {
+          successRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        });
+      } catch (e) {
+        setSlotConflict(null);
+        setError(e instanceof Error ? e.message : "Could not send quote.");
+      }
+    });
+  };
+
   const submitQuote = () => {
     if (!active) return;
 
@@ -168,35 +217,7 @@ export function QuoteManager({ quotes }: { quotes: QuoteRow[] }) {
       return;
     }
 
-    setError("");
-    setMessage("");
-    setSentSuccess(null);
-    setCopied(false);
-    startTransition(async () => {
-      try {
-        const result = await sendQuote({
-          quoteId: active.id,
-          amount: form.amount,
-          services: form.services,
-          quoteNotes: form.quoteNotes,
-          proposedDate: form.proposedDate || undefined,
-          proposedStartTime: form.proposedStartTime || undefined,
-          proposedEndTime: form.proposedEndTime || undefined,
-        });
-        setSentSuccess({
-          customerName: active.customerName,
-          customerEmail: active.customerEmail,
-          amount: form.amount,
-          token: result.token,
-        });
-        router.refresh();
-        requestAnimationFrame(() => {
-          successRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-        });
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Could not send quote.");
-      }
-    });
+    sendQuoteRequest();
   };
 
   const copyQuoteLink = async (token: string) => {
@@ -508,6 +529,54 @@ export function QuoteManager({ quotes }: { quotes: QuoteRow[] }) {
             </p>
           )}
         </section>
+      ) : null}
+
+      {slotConflict ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-forest/60 p-4"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !pending) {
+              setSlotConflict(null);
+            }
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="slot-conflict-title"
+            className="w-full max-w-md rounded-2xl border border-amber-200 bg-white p-6 shadow-xl"
+          >
+            <h3
+              id="slot-conflict-title"
+              className="font-display text-lg font-bold text-forest"
+            >
+              Time slot conflict
+            </h3>
+            <p className="mt-3 text-sm text-slate/70">{slotConflict}</p>
+            <p className="mt-2 text-sm text-slate/70">
+              The customer will still receive the quote with this proposed time.
+              Send anyway?
+            </p>
+            <div className="mt-6 flex flex-wrap justify-end gap-3">
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => setSlotConflict(null)}
+                className="rounded-lg border border-slate/15 px-4 py-2 text-sm font-semibold text-slate/70 hover:bg-slate/5 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => sendQuoteRequest(true)}
+                className="rounded-lg bg-teal px-4 py-2 text-sm font-semibold text-white hover:bg-teal/90 disabled:opacity-50"
+              >
+                {pending ? "Sending…" : "Send quote anyway"}
+              </button>
+            </div>
+          </div>
+        </div>
       ) : null}
     </div>
   );
