@@ -1,34 +1,8 @@
 import { getGoogleReviewUrl } from "@/lib/google-review";
-import {
-  getMailFromAddress,
-  getMailgunClient,
-} from "@/lib/mailgun";
+import { sendMail } from "@/lib/mailgun";
 import { sendSms } from "@/lib/sms";
 import { site } from "@/lib/site-config";
 import type { Booking } from "@prisma/client";
-
-async function sendMail(options: {
-  to: string[];
-  subject: string;
-  text: string;
-  html: string;
-}) {
-  const mailgun = getMailgunClient();
-  const from = getMailFromAddress();
-  const domain = process.env.MAILGUN_DOMAIN;
-
-  if (!mailgun || !from || !domain) {
-    throw new Error("MAILGUN_NOT_CONFIGURED");
-  }
-
-  await mailgun.messages.create(domain, {
-    from,
-    to: options.to,
-    subject: options.subject,
-    text: options.text,
-    html: options.html,
-  });
-}
 
 export async function sendReviewRequest(booking: Booking): Promise<void> {
   const reviewUrl = await getGoogleReviewUrl();

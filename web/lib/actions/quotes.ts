@@ -151,7 +151,7 @@ export async function acceptQuote(data: {
     throw new Error("Please select a date and time to book.");
   }
 
-  const slots = await getSlotsForDate(scheduledDateStr);
+  const slots = await getSlotsForDate(scheduledDateStr, { excludeQuoteId: quote.id });
   const slotValid = slots.some(
     (s) => s.startTime === startTime && s.endTime === endTime
   );

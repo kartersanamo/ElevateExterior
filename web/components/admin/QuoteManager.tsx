@@ -2,8 +2,16 @@
 
 import { sendQuote, releaseQuoteHold } from "@/lib/actions/quotes";
 import { services } from "@/lib/site-config";
+import { CheckCircle, Copy, ExternalLink } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+
+interface SentSuccess {
+  customerName: string;
+  customerEmail: string;
+  amount: string;
+  token: string;
+}
 
 interface QuoteRow {
   id: string;
@@ -91,8 +99,15 @@ function buildFormFromQuote(quote: QuoteRow) {
   };
 }
 
+function formatAmount(amount: string): string {
+  const parsed = Number.parseFloat(amount.replace(/[^0-9.]/g, ""));
+  if (Number.isNaN(parsed)) return amount;
+  return parsed.toLocaleString("en-US", { style: "currency", currency: "USD" });
+}
+
 export function QuoteManager({ quotes }: { quotes: QuoteRow[] }) {
   const router = useRouter();
+  const successRef = useRef<HTMLDivElement>(null);
   const [pending, startTransition] = useTransition();
   const initialActiveId = useMemo(
     () => quotes.find((q) => q.status === "PENDING")?.id ?? quotes[0]?.id ?? null,
@@ -101,6 +116,8 @@ export function QuoteManager({ quotes }: { quotes: QuoteRow[] }) {
   const [activeId, setActiveId] = useState<string | null>(initialActiveId);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [sentSuccess, setSentSuccess] = useState<SentSuccess | null>(null);
+  const [copied, setCopied] = useState(false);
   const [form, setForm] = useState({
     amount: "",
     services: [] as string[],
@@ -116,10 +133,15 @@ export function QuoteManager({ quotes }: { quotes: QuoteRow[] }) {
     const quote = quotes.find((q) => q.id === activeId);
     if (quote) {
       setForm(buildFormFromQuote(quote));
-      setError("");
-      setMessage("");
     }
   }, [activeId, quotes]);
+
+  useEffect(() => {
+    setError("");
+    setMessage("");
+    setSentSuccess(null);
+    setCopied(false);
+  }, [activeId]);
 
   const selectQuote = (quote: QuoteRow) => {
     setActiveId(quote.id);
@@ -148,6 +170,8 @@ export function QuoteManager({ quotes }: { quotes: QuoteRow[] }) {
 
     setError("");
     setMessage("");
+    setSentSuccess(null);
+    setCopied(false);
     startTransition(async () => {
       try {
         const result = await sendQuote({
@@ -159,12 +183,31 @@ export function QuoteManager({ quotes }: { quotes: QuoteRow[] }) {
           proposedStartTime: form.proposedStartTime || undefined,
           proposedEndTime: form.proposedEndTime || undefined,
         });
-        setMessage(`Quote sent. Customer link: /quote/${result.token}`);
+        setSentSuccess({
+          customerName: active.customerName,
+          customerEmail: active.customerEmail,
+          amount: form.amount,
+          token: result.token,
+        });
         router.refresh();
+        requestAnimationFrame(() => {
+          successRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        });
       } catch (e) {
         setError(e instanceof Error ? e.message : "Could not send quote.");
       }
     });
+  };
+
+  const copyQuoteLink = async (token: string) => {
+    const url = `${window.location.origin}/quote/${token}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setError("Could not copy link. Open the quote page and copy the URL from the browser.");
+    }
   };
 
   return (
@@ -227,6 +270,55 @@ export function QuoteManager({ quotes }: { quotes: QuoteRow[] }) {
             send.
           </p>
 
+          {sentSuccess ? (
+            <div
+              ref={successRef}
+              className="mt-4 rounded-2xl border-2 border-teal/40 bg-mint p-5 shadow-sm"
+              role="status"
+              aria-live="polite"
+            >
+              <div className="flex items-start gap-3">
+                <CheckCircle
+                  className="mt-0.5 shrink-0 text-teal"
+                  size={28}
+                  aria-hidden
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="font-display text-lg font-bold text-forest">
+                    Quote sent to customer
+                  </p>
+                  <p className="mt-1 text-sm text-slate/70">
+                    <span className="font-semibold text-forest">
+                      {sentSuccess.customerName}
+                    </span>{" "}
+                    received an email at{" "}
+                    <span className="font-medium">{sentSuccess.customerEmail}</span>{" "}
+                    with a {formatAmount(sentSuccess.amount)} quote and link to review
+                    and accept.
+                  </p>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <a
+                      href={`/quote/${sentSuccess.token}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 rounded-lg bg-teal px-4 py-2 text-sm font-semibold text-white hover:bg-teal/90"
+                    >
+                      <ExternalLink size={16} aria-hidden />
+                      View customer quote page
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => copyQuoteLink(sentSuccess.token)}
+                      className="inline-flex items-center gap-2 rounded-lg border border-teal/30 bg-white px-4 py-2 text-sm font-semibold text-teal hover:bg-teal/5"
+                    >
+                      <Copy size={16} aria-hidden />
+                      {copied ? "Copied!" : "Copy quote link"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
           {message ? (
             <p className="mt-4 rounded-lg bg-mint px-4 py-2 text-sm text-forest">{message}</p>
           ) : null}
@@ -381,7 +473,11 @@ export function QuoteManager({ quotes }: { quotes: QuoteRow[] }) {
                   onClick={submitQuote}
                   className="touch-target rounded-lg bg-teal px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
                 >
-                  {pending ? "Sending…" : "Send quote to customer"}
+                  {pending
+                    ? "Sending…"
+                    : active.status === "QUOTED"
+                      ? "Resend quote to customer"
+                      : "Send quote to customer"}
                 </button>
 
                 <button

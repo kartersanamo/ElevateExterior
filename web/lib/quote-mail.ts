@@ -1,38 +1,9 @@
-import {
-  getContactRecipients,
-  getMailFromAddress,
-  getMailgunClient,
-} from "@/lib/mailgun";
+import { getContactRecipients, sendMail } from "@/lib/mailgun";
 import { formatCents } from "@/lib/recurring";
 import { sendSms } from "@/lib/sms";
 import { getSiteUrl } from "@/lib/stripe";
 import { site, services } from "@/lib/site-config";
 import type { QuoteRequest } from "@prisma/client";
-
-async function sendMail(options: {
-  to: string[];
-  subject: string;
-  text: string;
-  html: string;
-  replyTo?: string;
-}) {
-  const mailgun = getMailgunClient();
-  const from = getMailFromAddress();
-  const domain = process.env.MAILGUN_DOMAIN;
-
-  if (!mailgun || !from || !domain) {
-    throw new Error("MAILGUN_NOT_CONFIGURED");
-  }
-
-  await mailgun.messages.create(domain, {
-    from,
-    to: options.to,
-    subject: options.subject,
-    text: options.text,
-    html: options.html,
-    ...(options.replyTo ? { "h:Reply-To": options.replyTo } : {}),
-  });
-}
 
 function quoteUrl(token: string): string {
   return `${getSiteUrl()}/quote/${token}`;
@@ -204,6 +175,7 @@ export async function sendQuoteAcceptedEmails(
       subject: `Quote accepted — ${quote.customerName}`,
       text: `${quote.customerName} accepted their quote. Booking is confirmed.`,
       html: `<p><strong>${quote.customerName}</strong> accepted their quote. The job is now booked.</p>`,
+      replyTo: null,
     });
   }
 }

@@ -5,29 +5,22 @@ import {
   sendBookingConfirmedEmail,
 } from "@/lib/booking-mail";
 import { db } from "@/lib/db";
-import {
-  getContactRecipients,
-  getMailFromAddress,
-  getMailgunClient,
-} from "@/lib/mailgun";
+import { getContactRecipients, sendMail } from "@/lib/mailgun";
 import { bookingToEmailPayload, getSlotsForDate } from "@/lib/scheduling/slots";
 import { sendSms } from "@/lib/sms";
 import { appointmentUrl } from "@/lib/urls";
 import { revalidatePath } from "next/cache";
 
 async function notifyAdmins(subject: string, text: string, html: string) {
-  const mailgun = getMailgunClient();
-  const from = getMailFromAddress();
-  const domain = process.env.MAILGUN_DOMAIN;
   const admins = getContactRecipients();
-  if (!mailgun || !from || !domain || admins.length === 0) return;
+  if (admins.length === 0) return;
 
-  await mailgun.messages.create(domain, {
-    from,
+  await sendMail({
     to: admins,
     subject,
     text,
     html,
+    replyTo: null,
   });
 }
 

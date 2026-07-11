@@ -1,35 +1,8 @@
 import { db } from "@/lib/db";
 import { renderTemplate, type TemplateVars } from "@/lib/email/render";
-import {
-  getContactRecipients,
-  getMailFromAddress,
-  getMailgunClient,
-} from "@/lib/mailgun";
+import { sendMail } from "@/lib/mailgun";
 import { formatDateLong, formatTime12 } from "@/lib/scheduling/dates";
 import type { Booking, EmailAutomation, EmailTemplate } from "@prisma/client";
-
-async function sendMail(options: {
-  to: string;
-  subject: string;
-  html: string;
-  text?: string;
-}) {
-  const mailgun = getMailgunClient();
-  const from = getMailFromAddress();
-  const domain = process.env.MAILGUN_DOMAIN;
-
-  if (!mailgun || !from || !domain) {
-    throw new Error("MAILGUN_NOT_CONFIGURED");
-  }
-
-  await mailgun.messages.create(domain, {
-    from,
-    to: [options.to],
-    subject: options.subject,
-    html: options.html,
-    text: options.text ?? options.html.replace(/<[^>]+>/g, ""),
-  });
-}
 
 export async function sendTemplateEmail(options: {
   template: Pick<EmailTemplate, "id" | "subject" | "bodyHtml" | "bodyText">;
@@ -45,7 +18,12 @@ export async function sendTemplateEmail(options: {
     ? renderTemplate(options.template.bodyText, options.vars)
     : undefined;
 
-  await sendMail({ to: options.to, subject, html, text });
+  await sendMail({
+    to: options.to,
+    subject,
+    html,
+    text: text ?? html.replace(/<[^>]+>/g, ""),
+  });
 
   await db.emailSendLog.create({
     data: {
@@ -131,78 +109,6 @@ export async function runAutomationForBooking(
       console.error(`Automation ${automation.id} failed:`, error);
     }
   }
-}
-
-export async function processScheduledAutomations() {
-  const automations = await db.emailAutomation.findMany({
-    where: {
-      enabled: true,
-      trigger: { in: ["DAYS_BEFORE_APPOINTMENT", "DAYS_AFTER_APPOINTMENT"] },
-    },
-    include: { template: true },
-  });
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  let sent = 0;
-
-  for (const automation of automations) {
-    const offset = automation.daysOffset ?? 0;
-    const target = new Date(today);
-
-    if (automation.trigger === "DAYS_BEFORE_APPOINTMENT") {
-      target.setDate(target.getDate() + offset);
-    } else {
-      target.setDate(target.getDate() - offset);
-    }
-
-    const dayStart = new Date(
-      Date.UTC(target.getFullYear(), target.getMonth(), target.getDate())
-    );
-    const dayEnd = new Date(dayStart);
-    dayEnd.setUTCDate(dayEnd.getUTCDate() + 1);
-
-    const status =
-      automation.trigger === "DAYS_BEFORE_APPOINTMENT"
-        ? "CONFIRMED"
-        : "COMPLETED";
-
-    const bookings = await db.booking.findMany({
-      where: {
-        status,
-        scheduledDate: { gte: dayStart, lt: dayEnd },
-      },
-    });
-
-    for (const booking of bookings) {
-      const services = JSON.parse(booking.services) as string[];
-      const vars = bookingVars(booking, services.join(", "));
-
-      const existing = await db.emailSendLog.findFirst({
-        where: {
-          automationId: automation.id,
-          bookingId: booking.id,
-          recipientEmail: booking.customerEmail.toLowerCase(),
-        },
-      });
-      if (existing) continue;
-
-      try {
-        await sendTemplateEmail({
-          template: automation.template,
-          to: booking.customerEmail,
-          vars,
-          automationId: automation.id,
-          bookingId: booking.id,
-        });
-        sent += 1;
-      } catch (error) {
-        console.error(`Scheduled automation ${automation.id} failed:`, error);
-      }
-    }
-  }
-
-  return { sent };
 }
 
 export async function sendManualEmail(options: {

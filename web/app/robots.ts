@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 
 export default function robots(): MetadataRoute.Robots {
   const siteUrl =
-    process.env.NEXT_PUBLIC_SITE_URL ?? "https://elevate.kartersanamo.com";
+    process.env.NEXT_PUBLIC_SITE_URL ?? "https://elevateexterior.org";
   return {
     rules: { userAgent: "*", allow: "/", disallow: ["/admin", "/login"] },
     sitemap: `${siteUrl}/sitemap.xml`,

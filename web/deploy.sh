@@ -30,7 +30,7 @@ for arg in "$@"; do
 done
 
 NEXT_PUBLIC_SITE_URL="$(read_env_var NEXT_PUBLIC_SITE_URL || true)"
-SITE_URL="${NEXT_PUBLIC_SITE_URL:-https://elevate.kartersanamo.com}"
+SITE_URL="${NEXT_PUBLIC_SITE_URL:-https://elevateexterior.org}"
 CONTAINER_NAME="elevate-exterior"
 IMAGE_TAG="elevate-exterior:latest"
 HOST_PORT=8006
@@ -96,7 +96,8 @@ docker run -d \
 echo "Done. Container listening on http://localhost:${HOST_PORT}"
 echo ""
 echo "If this is a new hostname, add to /etc/cloudflared/config.yml:"
-echo "  - hostname: elevate.kartersanamo.com"
+echo "  - hostname: elevateexterior.org"
+echo "  - hostname: www.elevateexterior.org"
 echo "    service: http://localhost:${HOST_PORT}"
 echo ""
 echo "Then: sudo systemctl restart cloudflared"

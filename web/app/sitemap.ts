@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 
 const siteUrl =
-  process.env.NEXT_PUBLIC_SITE_URL ?? "https://elevate.kartersanamo.com";
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://elevateexterior.org";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const routes = ["", "/services", "/gallery", "/about", "/contact", "/book"];

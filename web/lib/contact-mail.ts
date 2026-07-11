@@ -1,8 +1,4 @@
-import {
-  getContactRecipients,
-  getMailFromAddress,
-  getMailgunClient,
-} from "@/lib/mailgun";
+import { getContactRecipients, sendMail } from "@/lib/mailgun";
 import type { ContactFormData } from "@/lib/validators/contact";
 
 export type ContactFormPayload = ContactFormData;
@@ -10,14 +6,7 @@ export type ContactFormPayload = ContactFormData;
 export async function sendContactFormEmail(
   payload: ContactFormPayload
 ): Promise<void> {
-  const mailgun = getMailgunClient();
-  const from = getMailFromAddress();
-  const domain = process.env.MAILGUN_DOMAIN;
   const recipients = getContactRecipients();
-
-  if (!mailgun || !from || !domain) {
-    throw new Error("MAILGUN_NOT_CONFIGURED");
-  }
 
   if (recipients.length === 0) {
     throw new Error("NO_CONTACT_RECIPIENTS");
@@ -26,8 +15,7 @@ export async function sendContactFormEmail(
   const fullName = `${payload.firstName} ${payload.lastName}`;
   const phoneLine = payload.phone ? `\nPhone: ${payload.phone}` : "";
 
-  await mailgun.messages.create(domain, {
-    from,
+  await sendMail({
     to: recipients,
     subject: `New inquiry from ${fullName} — Elevate Exterior`,
     text: `New contact form submission.
@@ -45,6 +33,6 @@ ${payload.message}
 <p><strong>Message:</strong></p>
 <p style="white-space:pre-wrap;">${payload.message}</p>
 `,
-    "h:Reply-To": payload.email,
+    replyTo: payload.email,
   });
 }

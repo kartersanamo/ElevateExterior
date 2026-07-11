@@ -1,6 +1,6 @@
 # Elevate Exterior Cleaning — Website
 
-Next.js marketing site with online booking, contact forms, and admin dashboard for [Elevate Exterior Cleaning](https://elevate.kartersanamo.com).
+Next.js marketing site with online booking, contact forms, and admin dashboard for [Elevate Exterior Cleaning](https://elevateexterior.org).
 
 ## Stack
 
@@ -27,18 +27,29 @@ npm run dev
 - Site: http://localhost:3000
 - Admin: http://localhost:3000/admin (login with `ADMIN_EMAIL` / `ADMIN_PASSWORD`)
 
-## Deployment (`elevate.kartersanamo.com`)
+## Deployment (`elevateexterior.org`)
 
 1. Copy `.env.example` to `.env` and fill in production values.
 2. Run `./deploy.sh` — builds Docker image and starts on **port 8006**.
-3. Add Cloudflare tunnel ingress rule in `/etc/cloudflared/config.yml`:
+3. Add Cloudflare tunnel ingress rules in `/etc/cloudflared/config.yml`:
 
 ```yaml
-  - hostname: elevate.kartersanamo.com
+  - hostname: elevateexterior.org
+    service: http://localhost:8006
+  - hostname: www.elevateexterior.org
     service: http://localhost:8006
 ```
 
 4. Restart tunnel: `sudo systemctl restart cloudflared`
+
+### Email (Mailgun)
+
+Outbound mail sends from `noreply@elevateexterior.org`. Customer replies go directly to
+the owner's Gmail via the `Reply-To` header (`MAILGUN_REPLY_TO` in `.env`) — Kyle
+does not need a separate inbox on the domain.
+
+Add the DNS records in `mailgun-dns-elevateexterior.org.txt` at your registrar
+(SPF, DKIM, CNAME). The domain is registered in Mailgun; verify after DNS propagates.
 
 ## Pages
 

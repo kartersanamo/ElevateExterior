@@ -16,7 +16,7 @@ const dmSans = DM_Sans({
 });
 
 const siteUrl =
-  process.env.NEXT_PUBLIC_SITE_URL ?? "https://elevate.kartersanamo.com";
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://elevateexterior.org";
 
 export const viewport: Viewport = {
   width: "device-width",

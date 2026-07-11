@@ -53,8 +53,6 @@ interface SendLogRow {
 const TRIGGERS = [
   { value: "ON_BOOKING_REQUESTED", label: "When booking is requested" },
   { value: "ON_BOOKING_CONFIRMED", label: "When booking is confirmed" },
-  { value: "DAYS_BEFORE_APPOINTMENT", label: "X days before appointment" },
-  { value: "DAYS_AFTER_APPOINTMENT", label: "X days after appointment" },
 ] as const;
 
 const VARS_HELP =
@@ -96,8 +94,7 @@ export function EmailManager({
 
   const [automationForm, setAutomationForm] = useState({
     name: "",
-    trigger: "DAYS_BEFORE_APPOINTMENT" as string,
-    daysOffset: 1,
+    trigger: "ON_BOOKING_REQUESTED" as string,
     audience: "ALL_CUSTOMERS" as string,
     templateId: templates[0]?.id ?? "",
     listId: lists[0]?.id ?? "",
@@ -380,8 +377,7 @@ export function EmailManager({
           <section className="rounded-2xl border border-slate/10 bg-white p-6">
             <h2 className="font-display text-lg font-bold text-forest">New automation</h2>
             <p className="mt-1 text-sm text-slate/60">
-              Scheduled automations run daily via <code className="text-xs">/api/cron/process-emails</code>.
-              Set <code className="text-xs">CRON_SECRET</code> in your environment.
+              Automations run when a booking is requested or confirmed.
             </p>
             {templates.length === 0 ? (
               <p className="mt-4 text-sm text-amber-800">Create a template first.</p>
@@ -405,24 +401,6 @@ export function EmailManager({
                     </option>
                   ))}
                 </select>
-                {automationForm.trigger.includes("DAYS_") ? (
-                  <input
-                    type="number"
-                    min={0}
-                    max={365}
-                    value={automationForm.daysOffset}
-                    onChange={(e) =>
-                      setAutomationForm({
-                        ...automationForm,
-                        daysOffset: parseInt(e.target.value, 10) || 0,
-                      })
-                    }
-                    className="rounded-lg border border-slate/20 px-3 py-2 text-sm"
-                    placeholder="Days"
-                  />
-                ) : (
-                  <div />
-                )}
                 <select
                   value={automationForm.templateId}
                   onChange={(e) =>
@@ -471,9 +449,7 @@ export function EmailManager({
                   await createEmailAutomation({
                     name: automationForm.name,
                     trigger: automationForm.trigger as "ON_BOOKING_REQUESTED",
-                    daysOffset: automationForm.trigger.includes("DAYS_")
-                      ? automationForm.daysOffset
-                      : null,
+                    daysOffset: null,
                     audience: automationForm.audience as "ALL_CUSTOMERS",
                     templateId: automationForm.templateId,
                     listId:
