@@ -1,4 +1,4 @@
-import { mkdir, writeFile, readFile } from "fs/promises";
+import { copyFile, mkdir, writeFile, readFile } from "fs/promises";
 import path from "path";
 import { randomUUID } from "crypto";
 
@@ -75,6 +75,19 @@ export async function readJobPhoto(
 ): Promise<Buffer> {
   const safeName = path.basename(filename);
   return readFile(getJobPhotoPath(bookingId, safeName));
+}
+
+export async function copyJobPhotoToGallery(
+  bookingId: string,
+  filename: string
+): Promise<{ storageKey: string }> {
+  const safeName = path.basename(filename);
+  const ext = path.extname(safeName) || ".jpg";
+  const storageKey = `${randomUUID()}${ext}`;
+  const dir = getGalleryDir();
+  await mkdir(dir, { recursive: true });
+  await copyFile(getJobPhotoPath(bookingId, safeName), getGalleryImagePath(storageKey));
+  return { storageKey };
 }
 
 export function getGalleryDir(): string {

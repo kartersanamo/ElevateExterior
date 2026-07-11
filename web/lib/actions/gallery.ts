@@ -2,6 +2,7 @@
 
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { JOB_GALLERY_CATEGORY } from "@/lib/gallery";
 import { deleteGalleryFile } from "@/lib/uploads";
 import { revalidatePath } from "next/cache";
 
@@ -85,10 +86,22 @@ export async function deleteGalleryImage(id: string) {
   return { ok: true };
 }
 
-export async function reorderGalleryImage(id: string, direction: "up" | "down") {
+export async function reorderGalleryImage(
+  id: string,
+  direction: "up" | "down",
+  section?: "site" | "jobs"
+) {
   await requireAdmin();
 
+  const categoryFilter =
+    section === "jobs"
+      ? JOB_GALLERY_CATEGORY
+      : section === "site"
+        ? { not: JOB_GALLERY_CATEGORY }
+        : undefined;
+
   const images = await db.galleryImage.findMany({
+    where: categoryFilter ? { category: categoryFilter } : undefined,
     orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
   });
 

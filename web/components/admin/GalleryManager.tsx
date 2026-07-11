@@ -6,6 +6,7 @@ import {
   reorderGalleryImage,
   updateGalleryImage,
 } from "@/lib/actions/gallery";
+import { JOB_GALLERY_CATEGORY } from "@/lib/gallery";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
@@ -17,6 +18,118 @@ interface GalleryRow {
   category: string;
   sortOrder: number;
   published: boolean;
+}
+
+function GalleryImageList({
+  images,
+  section,
+  pending,
+  run,
+}: {
+  images: GalleryRow[];
+  section: "site" | "jobs";
+  pending: boolean;
+  run: (fn: () => Promise<unknown>) => void;
+}) {
+  if (images.length === 0) {
+    return (
+      <p className="mt-4 text-sm text-slate/60">
+        {section === "jobs"
+          ? "Photos from completed jobs will appear here, unpublished, until you toggle them on."
+          : "No images yet. The public gallery will show placeholder images until you add some."}
+      </p>
+    );
+  }
+
+  return (
+    <ul className="mt-4 space-y-6">
+      {images.map((img, index) => (
+        <li
+          key={img.id}
+          className="flex flex-col gap-4 border-b border-slate/10 pb-6 last:border-0 last:pb-0 lg:flex-row"
+        >
+          <div className="relative h-32 w-full shrink-0 overflow-hidden rounded-xl bg-slate/5 lg:w-48">
+            <Image
+              src={img.src}
+              alt={img.alt}
+              fill
+              className="object-cover"
+              sizes="192px"
+            />
+          </div>
+          <div className="min-w-0 flex-1 space-y-2">
+            <input
+              type="text"
+              defaultValue={img.alt}
+              onBlur={(e) => {
+                if (e.target.value !== img.alt) {
+                  run(() => updateGalleryImage(img.id, { alt: e.target.value }));
+                }
+              }}
+              className="w-full rounded-lg border border-slate/20 px-3 py-1.5 text-sm font-semibold text-forest"
+            />
+            <div className="flex flex-wrap gap-2">
+              <input
+                type="text"
+                defaultValue={img.category}
+                onBlur={(e) => {
+                  if (e.target.value !== img.category) {
+                    run(() =>
+                      updateGalleryImage(img.id, { category: e.target.value })
+                    );
+                  }
+                }}
+                className="rounded-lg border border-slate/20 px-3 py-1.5 text-sm"
+              />
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  defaultChecked={img.published}
+                  onChange={(e) =>
+                    run(() =>
+                      updateGalleryImage(img.id, { published: e.target.checked })
+                    )
+                  }
+                />
+                Published
+              </label>
+            </div>
+            <p className="truncate text-xs text-slate/50">{img.src}</p>
+          </div>
+          <div className="flex shrink-0 flex-wrap gap-2 lg:flex-col">
+            <button
+              type="button"
+              disabled={pending || index === 0}
+              onClick={() => run(() => reorderGalleryImage(img.id, "up", section))}
+              className="rounded-lg border border-slate/20 px-3 py-1.5 text-xs font-semibold disabled:opacity-40"
+            >
+              Move up
+            </button>
+            <button
+              type="button"
+              disabled={pending || index === images.length - 1}
+              onClick={() => run(() => reorderGalleryImage(img.id, "down", section))}
+              className="rounded-lg border border-slate/20 px-3 py-1.5 text-xs font-semibold disabled:opacity-40"
+            >
+              Move down
+            </button>
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => {
+                if (confirm("Delete this image?")) {
+                  run(() => deleteGalleryImage(img.id));
+                }
+              }}
+              className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-700"
+            >
+              Delete
+            </button>
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
 }
 
 export function GalleryManager({
@@ -33,11 +146,14 @@ export function GalleryManager({
   const [form, setForm] = useState({
     src: "",
     alt: "",
-    category: categories[0] ?? "",
+    category: categories.find((c) => c !== JOB_GALLERY_CATEGORY) ?? categories[0] ?? "",
     published: true,
     storageKey: "" as string | undefined,
   });
   const [uploading, setUploading] = useState(false);
+
+  const siteImages = images.filter((img) => img.category !== JOB_GALLERY_CATEGORY);
+  const jobImages = images.filter((img) => img.category === JOB_GALLERY_CATEGORY);
 
   const run = (fn: () => Promise<unknown>) => {
     setError("");
@@ -181,101 +297,33 @@ export function GalleryManager({
 
       <section className="rounded-2xl border border-slate/10 bg-white p-6">
         <h2 className="font-display text-lg font-bold text-forest">
-          Gallery ({images.length})
+          Site gallery ({siteImages.length})
         </h2>
-        {images.length === 0 ? (
-          <p className="mt-4 text-sm text-slate/60">
-            No images yet. The public gallery will show placeholder images until you add some.
-          </p>
-        ) : (
-          <ul className="mt-4 space-y-6">
-            {images.map((img, index) => (
-              <li
-                key={img.id}
-                className="flex flex-col gap-4 border-b border-slate/10 pb-6 last:border-0 last:pb-0 lg:flex-row"
-              >
-                <div className="relative h-32 w-full shrink-0 overflow-hidden rounded-xl bg-slate/5 lg:w-48">
-                  <Image
-                    src={img.src}
-                    alt={img.alt}
-                    fill
-                    className="object-cover"
-                    sizes="192px"
-                  />
-                </div>
-                <div className="min-w-0 flex-1 space-y-2">
-                  <input
-                    type="text"
-                    defaultValue={img.alt}
-                    onBlur={(e) => {
-                      if (e.target.value !== img.alt) {
-                        run(() => updateGalleryImage(img.id, { alt: e.target.value }));
-                      }
-                    }}
-                    className="w-full rounded-lg border border-slate/20 px-3 py-1.5 text-sm font-semibold text-forest"
-                  />
-                  <div className="flex flex-wrap gap-2">
-                    <input
-                      type="text"
-                      defaultValue={img.category}
-                      onBlur={(e) => {
-                        if (e.target.value !== img.category) {
-                          run(() =>
-                            updateGalleryImage(img.id, { category: e.target.value })
-                          );
-                        }
-                      }}
-                      className="rounded-lg border border-slate/20 px-3 py-1.5 text-sm"
-                    />
-                    <label className="flex items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        defaultChecked={img.published}
-                        onChange={(e) =>
-                          run(() =>
-                            updateGalleryImage(img.id, { published: e.target.checked })
-                          )
-                        }
-                      />
-                      Published
-                    </label>
-                  </div>
-                  <p className="truncate text-xs text-slate/50">{img.src}</p>
-                </div>
-                <div className="flex shrink-0 flex-wrap gap-2 lg:flex-col">
-                  <button
-                    type="button"
-                    disabled={pending || index === 0}
-                    onClick={() => run(() => reorderGalleryImage(img.id, "up"))}
-                    className="rounded-lg border border-slate/20 px-3 py-1.5 text-xs font-semibold disabled:opacity-40"
-                  >
-                    Move up
-                  </button>
-                  <button
-                    type="button"
-                    disabled={pending || index === images.length - 1}
-                    onClick={() => run(() => reorderGalleryImage(img.id, "down"))}
-                    className="rounded-lg border border-slate/20 px-3 py-1.5 text-xs font-semibold disabled:opacity-40"
-                  >
-                    Move down
-                  </button>
-                  <button
-                    type="button"
-                    disabled={pending}
-                    onClick={() => {
-                      if (confirm("Delete this image?")) {
-                        run(() => deleteGalleryImage(img.id));
-                      }
-                    }}
-                    className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-700"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
+        <p className="mt-1 text-sm text-slate/60">
+          Published images appear on the public gallery page.
+        </p>
+        <GalleryImageList
+          images={siteImages}
+          section="site"
+          pending={pending}
+          run={run}
+        />
+      </section>
+
+      <section className="rounded-2xl border border-amber-200/60 bg-amber-50/30 p-6">
+        <h2 className="font-display text-lg font-bold text-forest">
+          From completed jobs ({jobImages.length})
+        </h2>
+        <p className="mt-1 text-sm text-slate/60">
+          Photos added when marking a job complete. These are unpublished by default — toggle
+          Published when you want them on the main website gallery.
+        </p>
+        <GalleryImageList
+          images={jobImages}
+          section="jobs"
+          pending={pending}
+          run={run}
+        />
       </section>
     </div>
   );

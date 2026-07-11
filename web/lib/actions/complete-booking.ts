@@ -5,6 +5,7 @@ import { upsertCustomer } from "@/lib/customers";
 import { db } from "@/lib/db";
 import { sendJobCompletedEmail } from "@/lib/job-mail";
 import { parseDollarsToCents } from "@/lib/recurring";
+import { syncJobPhotosToGallery } from "@/lib/gallery";
 import { saveJobPhotos } from "@/lib/uploads";
 import { generatePublicToken } from "@/lib/tokens";
 import { revalidatePath } from "next/cache";
@@ -65,6 +66,12 @@ export async function completeBooking(bookingId: string, formData: FormData) {
   });
 
   try {
+    await syncJobPhotosToGallery(updated, updated.photos);
+  } catch (error) {
+    console.error("Gallery sync from job photos error:", error);
+  }
+
+  try {
     await upsertCustomer({
       email: updated.customerEmail,
       name: updated.customerName,
@@ -85,6 +92,9 @@ export async function completeBooking(bookingId: string, formData: FormData) {
   revalidatePath("/admin/bookings");
   revalidatePath(`/admin/bookings/${bookingId}/complete`);
   revalidatePath(`/admin/jobs/${bookingId}`);
+  revalidatePath("/admin/gallery");
+  revalidatePath("/gallery");
+  revalidatePath("/");
   revalidatePath(`/appointments/${publicToken}`);
 
   return { ok: true, publicToken };
