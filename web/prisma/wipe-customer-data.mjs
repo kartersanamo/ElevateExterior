@@ -5,6 +5,10 @@
  *   npm run db:wipe              # dry run — shows counts only
  *   npm run db:wipe -- --confirm # actually delete data and files
  *
+ * Job photos created by Docker are owned by root on the host. When local
+ * deletion fails, the script removes files via the elevate-exterior container
+ * (or a one-off alpine container using the same data volume).
+ *
  * Deletes: bookings, job photos, quotes, recurring services, customers,
  *          email send logs, and auto-added "Completed Jobs" gallery entries.
  *
@@ -13,19 +17,24 @@
  */
 
 import { PrismaClient } from "@prisma/client";
+import { execSync } from "child_process";
 import { readdir, rm, unlink } from "fs/promises";
 import path from "path";
 
 const JOB_GALLERY_CATEGORY = "Completed Jobs";
+const CONTAINER_NAME = "elevate-exterior";
 
 const db = new PrismaClient();
 const confirm = process.argv.includes("--confirm");
 
-function getUploadsRoot() {
+function getDataDir() {
   const dbUrl = process.env.DATABASE_URL ?? "file:./data/db.sqlite";
   const dbPath = dbUrl.replace(/^file:/, "");
-  const dataDir = path.dirname(dbPath);
-  return path.join(dataDir, "uploads");
+  return path.resolve(path.dirname(dbPath));
+}
+
+function getUploadsRoot() {
+  return path.join(getDataDir(), "uploads");
 }
 
 function getJobsDir() {
@@ -34,6 +43,71 @@ function getJobsDir() {
 
 function getGalleryImagePath(storageKey) {
   return path.join(getUploadsRoot(), "gallery", path.basename(storageKey));
+}
+
+function isDockerContainerRunning(name) {
+  try {
+    return (
+      execSync(`docker inspect -f '{{.State.Running}}' ${name}`, {
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "ignore"],
+      }).trim() === "true"
+    );
+  } catch {
+    return false;
+  }
+}
+
+function removeViaDocker(hostPath) {
+  const dataDir = getDataDir();
+  const resolved = path.resolve(hostPath);
+  const relative = path.relative(dataDir, resolved);
+
+  if (relative.startsWith("..")) {
+    throw new Error(`Refusing to delete path outside data directory: ${hostPath}`);
+  }
+
+  const containerPath = `/app/data/${relative.split(path.sep).join("/")}`;
+
+  if (isDockerContainerRunning(CONTAINER_NAME)) {
+    execSync(`docker exec ${CONTAINER_NAME} rm -rf ${JSON.stringify(containerPath)}`, {
+      stdio: "inherit",
+    });
+    return;
+  }
+
+  execSync(
+    `docker run --rm -v ${JSON.stringify(`${dataDir}:/app/data`)} alpine rm -rf ${JSON.stringify(containerPath)}`,
+    { stdio: "inherit" }
+  );
+}
+
+async function safeRemove(targetPath) {
+  try {
+    await rm(targetPath, { recursive: true, force: true });
+  } catch (err) {
+    if (err.code === "ENOENT") return;
+    if (err.code === "EACCES" || err.code === "EPERM") {
+      console.log(`  Permission denied for ${targetPath} — removing via Docker...`);
+      removeViaDocker(targetPath);
+      return;
+    }
+    throw err;
+  }
+}
+
+async function safeUnlink(filePath) {
+  try {
+    await unlink(filePath);
+  } catch (err) {
+    if (err.code === "ENOENT") return;
+    if (err.code === "EACCES" || err.code === "EPERM") {
+      console.log(`  Permission denied for ${filePath} — removing via Docker...`);
+      removeViaDocker(filePath);
+      return;
+    }
+    throw err;
+  }
 }
 
 async function countTransactionalData() {
@@ -111,19 +185,10 @@ async function wipeFilesystem() {
   });
 
   for (const image of completedJobImages) {
-    try {
-      await unlink(getGalleryImagePath(image.storageKey));
-    } catch (err) {
-      if (err.code !== "ENOENT") throw err;
-    }
+    await safeUnlink(getGalleryImagePath(image.storageKey));
   }
 
-  const jobsDir = getJobsDir();
-  try {
-    await rm(jobsDir, { recursive: true, force: true });
-  } catch (err) {
-    if (err.code !== "ENOENT") throw err;
-  }
+  await safeRemove(getJobsDir());
 
   return {
     galleryFilesRemoved: completedJobImages.length,
