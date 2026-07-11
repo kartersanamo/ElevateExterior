@@ -1,8 +1,8 @@
 import { QuoteAcceptPanel } from "@/components/quotes/QuoteAcceptPanel";
-import { db } from "@/lib/db";
+import { QuoteUnavailable } from "@/components/quotes/QuoteUnavailable";
+import { findQuoteByLinkToken } from "@/lib/quote-lookup";
 import { site } from "@/lib/site-config";
 import Link from "next/link";
-import { notFound } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
@@ -12,12 +12,9 @@ export default async function PublicQuotePage({
   params: Promise<{ token: string }>;
 }) {
   const { token } = await params;
-  const quote = await db.quoteRequest.findUnique({
-    where: { publicToken: token },
-    include: { booking: true },
-  });
+  const quote = await findQuoteByLinkToken(token);
 
-  if (!quote) notFound();
+  if (!quote) return <QuoteUnavailable />;
 
   const hasProposedSlot = Boolean(
     quote.proposedDate && quote.proposedStartTime && quote.proposedEndTime
@@ -48,7 +45,7 @@ export default async function PublicQuotePage({
         {quote.status === "QUOTED" && quote.quotedAmountCents != null ? (
           <div className="mt-8">
             <QuoteAcceptPanel
-              token={token}
+              token={quote.publicToken}
               amountCents={quote.quotedAmountCents}
               servicesJson={quote.services}
               quoteNotes={quote.quoteNotes}

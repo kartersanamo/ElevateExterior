@@ -14,6 +14,7 @@ import {
   getSlotsForDate,
 } from "@/lib/scheduling/slots";
 import { parseDollarsToCents } from "@/lib/recurring";
+import { findQuoteByLinkToken } from "@/lib/quote-lookup";
 import { generatePublicToken } from "@/lib/tokens";
 import { revalidatePath } from "next/cache";
 
@@ -139,9 +140,7 @@ export async function acceptQuote(data: {
   startTime?: string;
   endTime?: string;
 }) {
-  const quote = await db.quoteRequest.findUnique({
-    where: { publicToken: data.token },
-  });
+  const quote = await findQuoteByLinkToken(data.token);
 
   if (!quote) throw new Error("Quote not found.");
   if (quote.status !== "QUOTED") {
@@ -221,14 +220,14 @@ export async function acceptQuote(data: {
 
   revalidatePath("/admin/quotes");
   revalidatePath("/admin/bookings");
-  revalidatePath(`/quote/${data.token}`);
+  revalidatePath(`/quote/${quote.publicToken}`);
   revalidatePath(`/appointments/${publicToken}`);
 
   return { ok: true, bookingId: booking.id, appointmentToken: publicToken };
 }
 
 export async function declineQuote(token: string) {
-  const quote = await db.quoteRequest.findUnique({ where: { publicToken: token } });
+  const quote = await findQuoteByLinkToken(token);
   if (!quote) throw new Error("Quote not found.");
   if (quote.status !== "QUOTED") {
     throw new Error("This quote is no longer available.");
@@ -240,7 +239,7 @@ export async function declineQuote(token: string) {
   });
 
   revalidatePath("/admin/quotes");
-  revalidatePath(`/quote/${token}`);
+  revalidatePath(`/quote/${quote.publicToken}`);
   return { ok: true };
 }
 
