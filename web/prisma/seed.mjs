@@ -113,8 +113,17 @@ async function seedDefaultTemplates() {
     data: {
       name: "Appointment reminder",
       subject: "Reminder: your appointment on {{date}}",
-      bodyHtml:
-        "<p>Hi {{name}},</p><p>This is a friendly reminder about your upcoming appointment on <strong>{{date}}</strong> at <strong>{{time}}</strong>.</p><p>We look forward to seeing you at {{address}}.</p><p>— Elevate Exterior Cleaning</p>",
+      bodyHtml: `<p>Hi {{name}},</p>
+<p>This is a friendly reminder about your upcoming appointment on <strong>{{date}}</strong> at <strong>{{time}}</strong>.</p>
+<p>We'll see you at {{address}} for {{services}}.</p>
+<p>Need to reschedule? Reply to this email or call us anytime.</p>`,
+      bodyText: `Hi {{name}},
+
+This is a friendly reminder about your upcoming appointment on {{date}} at {{time}}.
+
+We'll see you at {{address}} for {{services}}.
+
+Need to reschedule? Reply to this email or call us anytime.`,
     },
   });
 

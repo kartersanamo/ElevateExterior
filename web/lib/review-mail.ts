@@ -1,3 +1,17 @@
+import {
+  buttonGroup,
+  emailEyebrow,
+  emailGreeting,
+  emailHeading,
+  emailParagraph,
+  emailSignature,
+  linkFallback,
+  statusPanel,
+  textButton,
+  textFooter,
+  textSignature,
+  wrapBrandedContent,
+} from "@/lib/email/design";
 import { getGoogleReviewUrl } from "@/lib/google-review";
 import { sendMail } from "@/lib/mailgun";
 import { sendSms } from "@/lib/sms";
@@ -8,26 +22,42 @@ export async function sendReviewRequest(booking: Booking): Promise<void> {
   const reviewUrl = await getGoogleReviewUrl();
   if (!reviewUrl) return;
 
-  await sendMail({
-    to: [booking.customerEmail],
-    subject: `How did we do? — ${site.shortName}`,
-    text: `Hi ${booking.customerName},
+  const html = wrapBrandedContent(
+    [
+      emailEyebrow("Thank you"),
+      emailHeading("How did we do?"),
+      emailGreeting(booking.customerName),
+      statusPanel(
+        "success",
+        "Service complete",
+        "We hope your home looks amazing. Your feedback means the world to our small business."
+      ),
+      emailParagraph(
+        "If you have a moment, we'd love a quick Google review. It helps neighbors find us and keeps our team motivated."
+      ),
+      buttonGroup([{ label: "Leave a Google review", href: reviewUrl }]),
+      linkFallback("Or copy this link:", reviewUrl),
+      emailSignature(),
+    ].join(""),
+    {
+      previewText: `We'd love your feedback on your recent service with ${site.shortName}`,
+      title: `How did we do? — ${site.shortName}`,
+    }
+  );
+
+  const text = `Hi ${booking.customerName},
 
 Thank you for choosing ${site.name}! If you have a moment, we'd love a Google review:
 
-${reviewUrl}
+${textButton("Leave a review", reviewUrl)}
 
-Your feedback helps our small business grow.
+Your feedback helps our small business grow.${textSignature()}${textFooter()}`;
 
-— ${site.name}`,
-    html: `
-<p>Hi ${booking.customerName},</p>
-<p>Thank you for choosing <strong>${site.name}</strong>! If you have a moment, we&apos;d love a Google review.</p>
-<p style="margin:24px 0;">
-  <a href="${reviewUrl}" style="display:inline-block;background:#0098e3;color:#fff;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:700;">Leave us a Google review</a>
-</p>
-<p>Your feedback helps our small business grow.</p>
-<p>— ${site.name}</p>`,
+  await sendMail({
+    to: [booking.customerEmail],
+    subject: `How did we do? — ${site.shortName}`,
+    text,
+    html,
   });
 
   await sendSms({

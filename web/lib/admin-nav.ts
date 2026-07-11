@@ -2,7 +2,6 @@ export type AdminNavLink = {
   href: string;
   label: string;
   exact?: boolean;
-  comingSoon?: boolean;
 };
 
 export const adminNavLinks: AdminNavLink[] = [
@@ -12,7 +11,7 @@ export const adminNavLinks: AdminNavLink[] = [
   { href: "/admin/customers", label: "Customers" },
   { href: "/admin/recurring", label: "Recurring" },
   { href: "/admin/gallery", label: "Gallery" },
-  { href: "/admin/emails", label: "Emails", comingSoon: true },
+  { href: "/admin/notifications", label: "Notifications" },
   { href: "/admin/team", label: "Team" },
   { href: "/admin/account", label: "Account" },
 ];

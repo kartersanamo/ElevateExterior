@@ -1,6 +1,26 @@
-import { getContactRecipients, sendMail } from "@/lib/mailgun";
+import {
+  buttonGroup,
+  detailCard,
+  emailEyebrow,
+  emailGreeting,
+  emailHeading,
+  emailParagraph,
+  emailSignature,
+  linkFallback,
+  messageBlock,
+  statusPanel,
+  textButton,
+  textDetailBlock,
+  textDivider,
+  textFooter,
+  textSignature,
+  wrapBrandedContent,
+} from "@/lib/email/design";
+import { getAdminNotificationRecipients } from "@/lib/admin-notifications";
+import { sendMail } from "@/lib/mailgun";
 import { site } from "@/lib/site-config";
 import { sendSms } from "@/lib/sms";
+import { getSiteUrl } from "@/lib/stripe";
 import { appointmentUrl } from "@/lib/urls";
 import type { BookingStatus } from "@prisma/client";
 
@@ -36,87 +56,172 @@ function formatTime(time: string): string {
   return `${hour}:${String(min).padStart(2, "0")} ${period}`;
 }
 
+function bookingDetailRows(payload: BookingEmailPayload) {
+  return [
+    { label: "Date", value: formatDate(payload.scheduledDate) },
+    {
+      label: "Time",
+      value: `${formatTime(payload.startTime)} – ${formatTime(payload.endTime)}`,
+    },
+    { label: "Services", value: payload.services.join(", ") },
+    { label: "Address", value: payload.address },
+    { label: "Phone", value: payload.customerPhone },
+    { label: "Booking ID", value: payload.id },
+  ];
+}
+
+function adminBookingDetailRows(payload: BookingEmailPayload) {
+  return [
+    { label: "Customer", value: payload.customerName },
+    { label: "Email", value: payload.customerEmail },
+    { label: "Phone", value: payload.customerPhone },
+    { label: "Address", value: payload.address },
+    { label: "Services", value: payload.services.join(", ") },
+    { label: "Date", value: formatDate(payload.scheduledDate) },
+    {
+      label: "Time",
+      value: `${formatTime(payload.startTime)} – ${formatTime(payload.endTime)}`,
+    },
+    { label: "Status", value: payload.status },
+    { label: "Booking ID", value: payload.id },
+  ];
+}
+
 function bookingDetailsText(payload: BookingEmailPayload): string {
-  const services = payload.services.join(", ");
-  return `Booking ID: ${payload.id}
-Customer: ${payload.customerName}
-Email: ${payload.customerEmail}
-Phone: ${payload.customerPhone}
-Address: ${payload.address}
-Services: ${services}
-Date: ${formatDate(payload.scheduledDate)}
-Time: ${formatTime(payload.startTime)} – ${formatTime(payload.endTime)}
-Status: ${payload.status}${payload.notes ? `\nNotes: ${payload.notes}` : ""}`;
+  return textDetailBlock("Appointment details", bookingDetailRows(payload));
 }
 
 export async function sendBookingSubmittedEmails(
   payload: BookingEmailPayload
 ): Promise<void> {
-  const recipients = getContactRecipients();
+  const recipients = await getAdminNotificationRecipients("BOOKING_REQUEST_SUBMITTED");
   if (recipients.length === 0) {
     throw new Error("NO_CONTACT_RECIPIENTS");
   }
 
-  const details = bookingDetailsText(payload);
+  const adminUrl = `${getSiteUrl()}/admin/bookings`;
+  const adminRows = adminBookingDetailRows(payload);
+
+  const adminHtml = wrapBrandedContent(
+    [
+      emailEyebrow("New booking request"),
+      emailHeading("Booking request received"),
+      statusPanel("info", "Pending confirmation", "Review and confirm this booking in admin."),
+      detailCard("Request details", adminRows),
+      payload.notes ? messageBlock(payload.notes) : "",
+      buttonGroup([{ label: "Review in admin", href: adminUrl }]),
+      linkFallback("Or open this link:", adminUrl),
+    ].join(""),
+    {
+      previewText: `New booking request from ${payload.customerName}`,
+      title: `New booking request — ${payload.customerName}`,
+    }
+  );
+
+  const adminText = `New booking request (pending confirmation):
+
+${textDivider()}
+${textDetailBlock("Request details", adminRows)}
+${payload.notes ? `\nNotes:\n${payload.notes}` : ""}
+${textDivider()}
+
+${textButton("Review in admin", adminUrl)}${textFooter()}`;
 
   await sendMail({
     to: recipients,
     subject: `New booking request — ${payload.customerName}`,
-    text: `New booking request (pending confirmation):\n\n${details}`,
-    html: `<p>New booking request <strong>(pending confirmation)</strong>:</p><pre style="white-space:pre-wrap;font-family:sans-serif;">${details}</pre>`,
+    text: adminText,
+    html: adminHtml,
     replyTo: payload.customerEmail,
   });
+
+  const customerHtml = wrapBrandedContent(
+    [
+      emailEyebrow("Booking request"),
+      emailHeading("We received your request"),
+      emailGreeting(payload.customerName),
+      statusPanel(
+        "info",
+        "Pending confirmation",
+        "We received your booking request and will confirm within 24 hours."
+      ),
+      detailCard("Your request", bookingDetailRows(payload)),
+      emailParagraph(
+        `Need to make changes? Call us at <a href="${site.phoneHref}" style="color:#0098e3;font-weight:600;text-decoration:none;">${site.phone}</a> or reply to this email.`
+      ),
+      emailSignature(),
+    ].join(""),
+    {
+      previewText: `We received your booking request with ${site.shortName}`,
+      title: `Booking request received — ${site.shortName}`,
+    }
+  );
+
+  const customerText = `Hi ${payload.customerName},
+
+Thanks for booking with ${site.name}! We received your request and will confirm within 24 hours.
+
+${textDivider()}
+${bookingDetailsText(payload)}
+${textDivider()}
+
+If you need to make changes, call us at ${site.phone} or reply to this email.${textSignature()}${textFooter()}`;
 
   await sendMail({
     to: [payload.customerEmail],
     subject: `We received your booking request — ${site.shortName}`,
-    text: `Hi ${payload.customerName},
-
-Thanks for booking with ${site.name}! We received your request and will confirm within 24 hours.
-
-${details}
-
-If you need to make changes, call us at ${site.phone} or reply to this email.
-
-— ${site.name}`,
-    html: `
-<p>Hi ${payload.customerName},</p>
-<p>Thanks for booking with <strong>${site.name}</strong>! We received your request and will confirm within 24 hours.</p>
-<pre style="white-space:pre-wrap;font-family:sans-serif;background:#f4f4f4;padding:12px;border-radius:8px;">${details}</pre>
-<p>If you need to make changes, call us at <a href="${site.phoneHref}">${site.phone}</a>.</p>
-<p>— ${site.name}</p>`,
+    text: customerText,
+    html: customerHtml,
   });
 }
 
 export async function sendBookingConfirmedEmail(
   payload: BookingEmailPayload
 ): Promise<void> {
-  const details = bookingDetailsText(payload);
   const link = payload.publicToken ? appointmentUrl(payload.publicToken) : null;
-  const linkText = link ? `\n\nManage your appointment: ${link}` : "";
-  const linkHtml = link
-    ? `<p><a href="${link}" style="display:inline-block;background:#0098e3;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;">View your appointment</a></p>`
-    : "";
+
+  const html = wrapBrandedContent(
+    [
+      emailEyebrow("Appointment confirmed"),
+      emailHeading("Your cleaning is confirmed"),
+      emailGreeting(payload.customerName),
+      statusPanel(
+        "success",
+        formatDate(payload.scheduledDate),
+        `${formatTime(payload.startTime)} – ${formatTime(payload.endTime)}`
+      ),
+      detailCard("Appointment details", bookingDetailRows(payload)),
+      link
+        ? buttonGroup([{ label: "View appointment", href: link }])
+        : "",
+      link ? linkFallback("Or copy this link:", link) : "",
+      emailParagraph(
+        `See you then! Questions? Call <a href="${site.phoneHref}" style="color:#0098e3;font-weight:600;text-decoration:none;">${site.phone}</a>.`
+      ),
+      emailSignature(),
+    ].join(""),
+    {
+      previewText: `Your cleaning is confirmed for ${formatDate(payload.scheduledDate)}`,
+      title: `Booking confirmed — ${formatDate(payload.scheduledDate)}`,
+    }
+  );
+
+  const text = `Hi ${payload.customerName},
+
+Your cleaning is confirmed!
+
+${textDivider()}
+${bookingDetailsText(payload)}
+${textDivider()}
+${link ? `\n${textButton("Manage your appointment", link)}` : ""}
+
+See you then! Questions? Call ${site.phone}.${textSignature()}${textFooter()}`;
 
   await sendMail({
     to: [payload.customerEmail],
     subject: `Booking confirmed — ${formatDate(payload.scheduledDate)}`,
-    text: `Hi ${payload.customerName},
-
-Your cleaning is confirmed!
-
-${details}${linkText}
-
-See you then! Questions? Call ${site.phone}.
-
-— ${site.name}`,
-    html: `
-<p>Hi ${payload.customerName},</p>
-<p><strong>Your cleaning is confirmed!</strong></p>
-<pre style="white-space:pre-wrap;font-family:sans-serif;background:#f4f4f4;padding:12px;border-radius:8px;">${details}</pre>
-${linkHtml}
-<p>See you then! Questions? Call <a href="${site.phoneHref}">${site.phone}</a>.</p>
-<p>— ${site.name}</p>`,
+    text,
+    html,
   });
 
   if (link) {
@@ -130,20 +235,44 @@ ${linkHtml}
 export async function sendBookingCancelledEmail(
   payload: BookingEmailPayload
 ): Promise<void> {
-  await sendMail({
-    to: [payload.customerEmail],
-    subject: `Booking cancelled — ${site.shortName}`,
-    text: `Hi ${payload.customerName},
+  const bookUrl = `${getSiteUrl()}/book`;
+
+  const html = wrapBrandedContent(
+    [
+      emailEyebrow("Appointment cancelled"),
+      emailHeading("Your booking was cancelled"),
+      emailGreeting(payload.customerName),
+      statusPanel(
+        "warning",
+        "Booking cancelled",
+        `${formatDate(payload.scheduledDate)} at ${formatTime(payload.startTime)}`
+      ),
+      emailParagraph("We're sorry to see this appointment go. When you're ready, we'd love to help you reschedule."),
+      buttonGroup([
+        { label: "Book again", href: bookUrl },
+        { label: "Call us", href: site.phoneHref, variant: "secondary" },
+      ]),
+      linkFallback("Or book online:", bookUrl),
+      emailSignature(),
+    ].join(""),
+    {
+      previewText: `Your booking for ${formatDate(payload.scheduledDate)} was cancelled`,
+      title: `Booking cancelled — ${site.shortName}`,
+    }
+  );
+
+  const text = `Hi ${payload.customerName},
 
 Your booking for ${formatDate(payload.scheduledDate)} at ${formatTime(payload.startTime)} has been cancelled.
 
 To reschedule, visit our website or call ${site.phone}.
 
-— ${site.name}`,
-    html: `
-<p>Hi ${payload.customerName},</p>
-<p>Your booking for <strong>${formatDate(payload.scheduledDate)}</strong> at <strong>${formatTime(payload.startTime)}</strong> has been cancelled.</p>
-<p>To reschedule, <a href="${process.env.NEXT_PUBLIC_SITE_URL ?? ""}/book">book online</a> or call <a href="${site.phoneHref}">${site.phone}</a>.</p>
-<p>— ${site.name}</p>`,
+${textButton("Book online", bookUrl)}${textSignature()}${textFooter()}`;
+
+  await sendMail({
+    to: [payload.customerEmail],
+    subject: `Booking cancelled — ${site.shortName}`,
+    text,
+    html,
   });
 }

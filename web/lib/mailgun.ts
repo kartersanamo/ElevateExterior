@@ -54,12 +54,6 @@ export function getReplyToAddress(): string | null {
   return contact ?? null;
 }
 
-export function getContactRecipients(): string[] {
-  const to = process.env.CONTACT_TO_EMAIL ?? process.env.ADMIN_EMAIL;
-  if (!to) return [];
-  return to.split(",").map((e) => e.trim()).filter(Boolean);
-}
-
 export async function sendMail(options: {
   to: string | string[];
   subject: string;

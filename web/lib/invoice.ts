@@ -1,6 +1,10 @@
 import { formatCents } from "@/lib/recurring";
 import { services, site } from "@/lib/site-config";
+import { emailColors, escapeHtml } from "@/lib/email/design";
 import type { Booking } from "@prisma/client";
+
+const fontDisplay = "'Outfit', Arial, Helvetica, sans-serif";
+const fontBody = "'DM Sans', Arial, Helvetica, sans-serif";
 
 function serviceLabels(servicesJson: string): string {
   try {
@@ -39,59 +43,79 @@ export function generateInvoiceNumber(bookingId: string): string {
   return `INV-${stamp}-${bookingId.slice(-6).toUpperCase()}`;
 }
 
+export function buildInvoiceSection(
+  booking: Booking,
+  invoiceNumber: string,
+  paidAt: Date
+): string {
+  const serviceLine = serviceLabels(booking.services);
+  const amount = formatCents(booking.amountChargedCents ?? 0);
+  const paidDate = paidAt.toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:24px 0 0;">
+    <tr>
+      <td style="background-color:${emailColors.cream};border:1px solid ${emailColors.border};border-radius:12px;padding:24px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td style="padding-bottom:16px;">
+              <p style="margin:0;font-family:${fontDisplay};font-size:12px;font-weight:700;color:${emailColors.teal};text-transform:uppercase;letter-spacing:0.12em;">Invoice</p>
+              <p style="margin:4px 0 0;font-family:${fontDisplay};font-size:22px;font-weight:700;color:${emailColors.forest};">${escapeHtml(invoiceNumber)}</p>
+              <p style="margin:8px 0 0;font-family:${fontBody};font-size:14px;font-weight:600;color:${emailColors.teal};">Paid ${paidDate}</p>
+            </td>
+          </tr>
+        </table>
+
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:16px 0;">
+          <tr>
+            <td style="padding:8px 0;font-family:${fontBody};font-size:13px;font-weight:600;color:${emailColors.slateMuted};width:100px;vertical-align:top;">Bill to</td>
+            <td style="padding:8px 0;font-family:${fontBody};font-size:15px;color:${emailColors.slate};vertical-align:top;">
+              ${escapeHtml(booking.customerName)}<br />
+              ${escapeHtml(booking.customerEmail)}<br />
+              ${escapeHtml(booking.address)}
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:8px 0;font-family:${fontBody};font-size:13px;font-weight:600;color:${emailColors.slateMuted};vertical-align:top;">Service date</td>
+            <td style="padding:8px 0;font-family:${fontBody};font-size:15px;color:${emailColors.slate};vertical-align:top;">${formatDate(booking.scheduledDate)}</td>
+          </tr>
+          <tr>
+            <td style="padding:8px 0;font-family:${fontBody};font-size:13px;font-weight:600;color:${emailColors.slateMuted};vertical-align:top;">Time</td>
+            <td style="padding:8px 0;font-family:${fontBody};font-size:15px;color:${emailColors.slate};vertical-align:top;">${formatTime(booking.startTime)} – ${formatTime(booking.endTime)}</td>
+          </tr>
+        </table>
+
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:8px;border-top:1px solid ${emailColors.border};">
+          <tr>
+            <td style="padding:14px 0;font-family:${fontBody};font-size:13px;font-weight:600;color:${emailColors.slateMuted};text-transform:uppercase;letter-spacing:0.06em;">Description</td>
+            <td align="right" style="padding:14px 0;font-family:${fontBody};font-size:13px;font-weight:600;color:${emailColors.slateMuted};text-transform:uppercase;letter-spacing:0.06em;">Amount</td>
+          </tr>
+          <tr>
+            <td style="padding:12px 0;border-top:1px solid ${emailColors.border};font-family:${fontBody};font-size:15px;color:${emailColors.slate};">${escapeHtml(serviceLine)}</td>
+            <td align="right" style="padding:12px 0;border-top:1px solid ${emailColors.border};font-family:${fontBody};font-size:15px;color:${emailColors.slate};">${amount}</td>
+          </tr>
+          <tr>
+            <td style="padding:16px 0 0;border-top:2px solid ${emailColors.forest};font-family:${fontDisplay};font-size:18px;font-weight:700;color:${emailColors.forest};">Total</td>
+            <td align="right" style="padding:16px 0 0;border-top:2px solid ${emailColors.forest};font-family:${fontDisplay};font-size:18px;font-weight:700;color:${emailColors.forest};">${amount}</td>
+          </tr>
+        </table>
+
+        <p style="margin:20px 0 0;font-family:${fontBody};font-size:13px;line-height:1.6;color:${emailColors.slateMuted};">
+          Thank you for choosing ${site.name}. Questions? ${site.phone} · ${site.email}
+        </p>
+      </td>
+    </tr>
+  </table>`;
+}
+
+/** @deprecated Use buildInvoiceSection for email embedding. */
 export function buildInvoiceHtml(
   booking: Booking,
   invoiceNumber: string,
   paidAt: Date
 ): string {
-  const services = serviceLabels(booking.services);
-  const amount = formatCents(booking.amountChargedCents ?? 0);
-
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <title>Invoice ${invoiceNumber}</title>
-  <style>
-    body { font-family: system-ui, sans-serif; color: #013c83; max-width: 640px; margin: 0 auto; padding: 32px 20px; }
-    h1 { font-size: 1.5rem; margin: 0 0 8px; }
-    .muted { color: #5a718a; font-size: 0.9rem; }
-    table { width: 100%; border-collapse: collapse; margin: 24px 0; }
-    th, td { text-align: left; padding: 10px 0; border-bottom: 1px solid #d9e8f5; }
-    .total { font-size: 1.25rem; font-weight: 700; }
-    .paid { color: #0098e3; font-weight: 600; }
-  </style>
-</head>
-<body>
-  <h1>${site.name}</h1>
-  <p class="muted">Invoice ${invoiceNumber}</p>
-  <p class="paid">Paid ${paidAt.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</p>
-
-  <p><strong>Bill to:</strong><br />
-  ${booking.customerName}<br />
-  ${booking.customerEmail}<br />
-  ${booking.address}</p>
-
-  <p><strong>Service date:</strong> ${formatDate(booking.scheduledDate)}<br />
-  <strong>Time:</strong> ${formatTime(booking.startTime)} – ${formatTime(booking.endTime)}</p>
-
-  <table>
-    <thead>
-      <tr><th>Description</th><th>Amount</th></tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td>${services}</td>
-        <td>${amount}</td>
-      </tr>
-      <tr>
-        <td class="total">Total</td>
-        <td class="total">${amount}</td>
-      </tr>
-    </tbody>
-  </table>
-
-  <p class="muted">Thank you for choosing ${site.name}. Questions? ${site.phone} · ${site.email}</p>
-</body>
-</html>`;
+  return buildInvoiceSection(booking, invoiceNumber, paidAt);
 }

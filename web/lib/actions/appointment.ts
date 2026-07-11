@@ -4,16 +4,62 @@ import {
   sendBookingCancelledEmail,
   sendBookingConfirmedEmail,
 } from "@/lib/booking-mail";
+import {
+  buttonGroup,
+  detailCard,
+  emailEyebrow,
+  emailHeading,
+  statusPanel,
+  textDetailBlock,
+  textDivider,
+  textFooter,
+  wrapBrandedContent,
+} from "@/lib/email/design";
+import { getAdminNotificationRecipients } from "@/lib/admin-notifications";
 import { db } from "@/lib/db";
-import { getContactRecipients, sendMail } from "@/lib/mailgun";
+import { sendMail } from "@/lib/mailgun";
 import { bookingToEmailPayload, getSlotsForDate } from "@/lib/scheduling/slots";
 import { sendSms } from "@/lib/sms";
+import { getSiteUrl } from "@/lib/stripe";
 import { appointmentUrl } from "@/lib/urls";
 import { revalidatePath } from "next/cache";
 
-async function notifyAdmins(subject: string, text: string, html: string) {
-  const admins = getContactRecipients();
+async function notifyAdmins(
+  event: "CUSTOMER_RESCHEDULED" | "CUSTOMER_CANCELLED",
+  eyebrow: string,
+  heading: string,
+  statusTitle: string,
+  statusBody: string,
+  rows: Array<{ label: string; value: string }>,
+  subject: string,
+  textSummary: string
+) {
+  const admins = await getAdminNotificationRecipients(event);
   if (admins.length === 0) return;
+
+  const adminUrl = `${getSiteUrl()}/admin/bookings`;
+
+  const html = wrapBrandedContent(
+    [
+      emailEyebrow(eyebrow),
+      emailHeading(heading),
+      statusPanel("info", statusTitle, statusBody),
+      detailCard("Appointment details", rows),
+      buttonGroup([{ label: "View in admin", href: adminUrl }]),
+    ].join(""),
+    {
+      previewText: textSummary,
+      title: subject,
+    }
+  );
+
+  const text = `${textSummary}
+
+${textDivider()}
+${textDetailBlock("Appointment details", rows)}
+${textDivider()}
+
+View in admin: ${adminUrl}${textFooter()}`;
 
   await sendMail({
     to: admins,
@@ -70,9 +116,21 @@ export async function rescheduleAppointment(data: {
       body: `Your Elevate Exterior appointment was rescheduled. View details: ${appointmentUrl(data.token)}`,
     });
     await notifyAdmins(
+      "CUSTOMER_RESCHEDULED",
+      "Appointment rescheduled",
+      "Customer rescheduled",
+      `${updated.customerName} rescheduled`,
+      `New date: ${data.scheduledDate} at ${data.startTime}`,
+      [
+        { label: "Customer", value: updated.customerName },
+        { label: "Email", value: updated.customerEmail },
+        { label: "Phone", value: updated.customerPhone },
+        { label: "New date", value: data.scheduledDate },
+        { label: "New time", value: `${data.startTime} – ${data.endTime}` },
+        { label: "Booking ID", value: updated.id },
+      ],
       `Appointment rescheduled — ${updated.customerName}`,
-      `${updated.customerName} rescheduled to ${data.scheduledDate} ${data.startTime}.`,
-      `<p><strong>${updated.customerName}</strong> rescheduled to ${data.scheduledDate} at ${data.startTime}.</p>`
+      `${updated.customerName} rescheduled to ${data.scheduledDate} ${data.startTime}.`
     );
   } catch (error) {
     console.error("Reschedule notification error:", error);
@@ -107,9 +165,21 @@ export async function cancelAppointment(token: string) {
       body: `Your Elevate Exterior appointment on ${payload.scheduledDate} was cancelled. Rebook: ${process.env.NEXT_PUBLIC_SITE_URL ?? ""}/book`,
     });
     await notifyAdmins(
+      "CUSTOMER_CANCELLED",
+      "Appointment cancelled",
+      "Customer cancelled",
+      `${updated.customerName} cancelled their appointment`,
+      `Original date: ${payload.scheduledDate}`,
+      [
+        { label: "Customer", value: updated.customerName },
+        { label: "Email", value: updated.customerEmail },
+        { label: "Phone", value: updated.customerPhone },
+        { label: "Date", value: payload.scheduledDate },
+        { label: "Time", value: `${payload.startTime} – ${payload.endTime}` },
+        { label: "Booking ID", value: updated.id },
+      ],
       `Appointment cancelled — ${updated.customerName}`,
-      `${updated.customerName} cancelled their appointment for ${payload.scheduledDate}.`,
-      `<p><strong>${updated.customerName}</strong> cancelled their appointment for ${payload.scheduledDate}.</p>`
+      `${updated.customerName} cancelled their appointment for ${payload.scheduledDate}.`
     );
   } catch (error) {
     console.error("Cancel notification error:", error);

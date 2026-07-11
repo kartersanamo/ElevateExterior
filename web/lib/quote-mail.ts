@@ -1,4 +1,23 @@
-import { getContactRecipients, sendMail } from "@/lib/mailgun";
+import {
+  buttonGroup,
+  detailCard,
+  emailEyebrow,
+  emailGreeting,
+  emailHeading,
+  emailParagraph,
+  emailSignature,
+  linkFallback,
+  messageBlock,
+  statusPanel,
+  textButton,
+  textDetailBlock,
+  textDivider,
+  textFooter,
+  textSignature,
+  wrapBrandedContent,
+} from "@/lib/email/design";
+import { getAdminNotificationRecipients } from "@/lib/admin-notifications";
+import { sendMail } from "@/lib/mailgun";
 import { sendSms } from "@/lib/sms";
 import { getSiteUrl } from "@/lib/stripe";
 import { site, services } from "@/lib/site-config";
@@ -45,39 +64,56 @@ function preferredScheduleLine(quote: QuoteRequest): string {
   return "Not specified";
 }
 
+function quoteDetailRows(quote: QuoteRequest) {
+  return [
+    { label: "Customer", value: quote.customerName },
+    { label: "Email", value: quote.customerEmail },
+    { label: "Phone", value: quote.customerPhone ?? "Not provided" },
+    { label: "Address", value: quote.address ?? "Not provided" },
+    { label: "Services", value: serviceLabels(quote.services) },
+    { label: "Preferred time", value: preferredScheduleLine(quote) },
+  ];
+}
+
 export async function sendQuoteRequestNotification(
   quote: QuoteRequest
 ): Promise<void> {
-  const recipients = getContactRecipients();
+  const recipients = await getAdminNotificationRecipients("QUOTE_REQUEST_SUBMITTED");
   if (recipients.length === 0) return;
 
-  const serviceLine = serviceLabels(quote.services);
-  const scheduleLine = preferredScheduleLine(quote);
-  const addressLine = quote.address ?? "Not provided";
-  const phoneLine = quote.customerPhone ?? "Not provided";
+  const adminUrl = `${getSiteUrl()}/admin/quotes`;
+  const rows = quoteDetailRows(quote);
+
+  const html = wrapBrandedContent(
+    [
+      emailEyebrow("New quote request"),
+      emailHeading("Quote request received"),
+      emailParagraph("A new quote request just came in from your website."),
+      detailCard("Request details", rows),
+      quote.message ? messageBlock(quote.message) : "",
+      buttonGroup([{ label: "Review in admin", href: adminUrl }]),
+      linkFallback("Or open this link:", adminUrl),
+    ].join(""),
+    {
+      previewText: `New quote request from ${quote.customerName}`,
+      title: `New quote request — ${quote.customerName}`,
+    }
+  );
+
+  const text = `New quote request from ${quote.customerName} (${quote.customerEmail})
+
+${textDivider()}
+${textDetailBlock("Request details", rows)}
+${quote.message ? `\nMessage:\n${quote.message}` : ""}
+${textDivider()}
+
+${textButton("Review in admin", adminUrl)}${textFooter()}`;
 
   await sendMail({
     to: recipients,
     subject: `New quote request — ${quote.customerName}`,
-    text: `New quote request from ${quote.customerName} (${quote.customerEmail})
-
-Phone: ${phoneLine}
-Address: ${addressLine}
-Services: ${serviceLine}
-Preferred time: ${scheduleLine}
-
-${quote.message}
-
-Review in admin: ${getSiteUrl()}/admin/quotes`,
-    html: `<p>New quote request from <strong>${quote.customerName}</strong> (${quote.customerEmail})</p>
-<ul>
-  <li><strong>Phone:</strong> ${phoneLine}</li>
-  <li><strong>Address:</strong> ${addressLine}</li>
-  <li><strong>Services:</strong> ${serviceLine}</li>
-  <li><strong>Preferred time:</strong> ${scheduleLine}</li>
-</ul>
-<p>${quote.message.replace(/\n/g, "<br />")}</p>
-<p><a href="${getSiteUrl()}/admin/quotes">Review in admin</a></p>`,
+    text,
+    html,
     replyTo: quote.customerEmail,
   });
 }
@@ -88,30 +124,51 @@ export async function sendQuoteRequestConfirmation(
   const serviceLine = serviceLabels(quote.services);
   const scheduleLine = preferredScheduleLine(quote);
 
-  await sendMail({
-    to: [quote.customerEmail],
-    subject: `Quote request received — ${site.shortName}`,
-    text: `Hi ${quote.customerName},
+  const html = wrapBrandedContent(
+    [
+      emailEyebrow("Quote request"),
+      emailHeading("We received your request"),
+      emailGreeting(quote.customerName),
+      statusPanel(
+        "success",
+        "You're on our list",
+        `We'll review your request and send a personalized quote within 24 hours.`
+      ),
+      detailCard("Your request", [
+        { label: "Services", value: serviceLine },
+        { label: "Preferred time", value: scheduleLine },
+      ]),
+      emailParagraph(
+        `Questions in the meantime? Call us at <a href="${site.phoneHref}" style="color:#0098e3;font-weight:600;text-decoration:none;">${site.phone}</a>.`
+      ),
+      emailSignature(),
+    ].join(""),
+    {
+      previewText: `Thanks for your quote request with ${site.shortName}`,
+      title: `Quote request received — ${site.shortName}`,
+    }
+  );
+
+  const text = `Hi ${quote.customerName},
 
 Thanks for your quote request with ${site.name}.
 
-Services: ${serviceLine}
-Preferred time: ${scheduleLine}
+${textDivider()}
+${textDetailBlock("Your request", [
+  { label: "Services", value: serviceLine },
+  { label: "Preferred time", value: scheduleLine },
+])}
+${textDivider()}
 
 We'll review your request and send a personalized quote within 24 hours.
 
-Questions? Call ${site.phone}
+Questions? Call ${site.phone}${textSignature()}${textFooter()}`;
 
-— ${site.name}`,
-    html: `<p>Hi ${quote.customerName},</p>
-<p>Thanks for your quote request with <strong>${site.name}</strong>.</p>
-<ul>
-  <li><strong>Services:</strong> ${serviceLine}</li>
-  <li><strong>Preferred time:</strong> ${scheduleLine}</li>
-</ul>
-<p>We&apos;ll review your request and send a personalized quote within 24 hours.</p>
-<p>Questions? Call <a href="${site.phoneHref}">${site.phone}</a></p>
-<p>— ${site.name}</p>`,
+  await sendMail({
+    to: [quote.customerEmail],
+    subject: `Quote request received — ${site.shortName}`,
+    text,
+    html,
   });
 }
 
@@ -122,23 +179,35 @@ export async function sendQuoteToCustomer(quote: QuoteRequest): Promise<void> {
 
   const url = quoteUrl(quote.publicToken);
 
-  await sendMail({
-    to: [quote.customerEmail],
-    subject: `Your quote from ${site.shortName}`,
-    text: `Hi ${quote.customerName},
+  const html = wrapBrandedContent(
+    [
+      emailEyebrow("Your quote"),
+      emailHeading("Your quote is ready"),
+      emailGreeting(quote.customerName),
+      emailParagraph(
+        `Your personalized quote from <strong style="color:#013c83;">${site.name}</strong> is ready. Review the full details and accept it online in just a few clicks.`
+      ),
+      buttonGroup([{ label: "Review & accept quote", href: url }]),
+      linkFallback("Or copy this link:", url),
+      emailSignature(),
+    ].join(""),
+    {
+      previewText: `Your quote from ${site.shortName} is ready to review`,
+      title: `Your quote from ${site.shortName}`,
+    }
+  );
+
+  const text = `Hi ${quote.customerName},
 
 Your quote from ${site.name} is ready. Open the link below to review the full details and accept it on our website.
 
-Review and accept: ${url}
+${textButton("Review and accept", url)}${textSignature()}${textFooter()}`;
 
-— ${site.name}`,
-    html: `
-<p>Hi ${quote.customerName},</p>
-<p>Your quote from <strong>${site.name}</strong> is ready. Click the button below to review the full details and accept it on our website.</p>
-<p style="margin:24px 0;">
-  <a href="${url}" style="display:inline-block;background:#0098e3;color:#fff;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:700;">Review &amp; accept quote</a>
-</p>
-<p>— ${site.name}</p>`,
+  await sendMail({
+    to: [quote.customerEmail],
+    subject: `Your quote from ${site.shortName}`,
+    text,
+    html,
   });
 
   await sendSms({
@@ -150,14 +219,41 @@ Review and accept: ${url}
 export async function sendQuoteAcceptedEmails(
   quote: QuoteRequest
 ): Promise<void> {
-  const recipients = getContactRecipients();
-  if (recipients.length > 0) {
-    await sendMail({
-      to: recipients,
-      subject: `Quote accepted — ${quote.customerName}`,
-      text: `${quote.customerName} accepted their quote. Booking is confirmed.`,
-      html: `<p><strong>${quote.customerName}</strong> accepted their quote. The job is now booked.</p>`,
-      replyTo: null,
-    });
-  }
+  const recipients = await getAdminNotificationRecipients("QUOTE_ACCEPTED");
+  if (recipients.length === 0) return;
+
+  const adminUrl = `${getSiteUrl()}/admin/quotes`;
+  const rows = quoteDetailRows(quote);
+
+  const html = wrapBrandedContent(
+    [
+      emailEyebrow("Quote accepted"),
+      emailHeading("Quote accepted — booking confirmed"),
+      statusPanel("success", `${quote.customerName} accepted their quote`),
+      emailParagraph("The job is now booked. Review the details below."),
+      detailCard("Booking details", rows),
+      buttonGroup([{ label: "View in admin", href: adminUrl }]),
+      linkFallback("Or open this link:", adminUrl),
+    ].join(""),
+    {
+      previewText: `${quote.customerName} accepted their quote`,
+      title: `Quote accepted — ${quote.customerName}`,
+    }
+  );
+
+  const text = `${quote.customerName} accepted their quote. The job is now booked.
+
+${textDivider()}
+${textDetailBlock("Booking details", rows)}
+${textDivider()}
+
+${textButton("View in admin", adminUrl)}${textFooter()}`;
+
+  await sendMail({
+    to: recipients,
+    subject: `Quote accepted — ${quote.customerName}`,
+    text,
+    html,
+    replyTo: null,
+  });
 }

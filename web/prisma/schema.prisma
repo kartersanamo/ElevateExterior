@@ -43,14 +43,35 @@ enum EmailAudience {
   EMAIL_LIST
 }
 
+enum AdminNotificationEvent {
+  CONTACT_FORM_SUBMITTED
+  QUOTE_REQUEST_SUBMITTED
+  QUOTE_ACCEPTED
+  BOOKING_REQUEST_SUBMITTED
+  CUSTOMER_RESCHEDULED
+  CUSTOMER_CANCELLED
+  PAYMENT_RECEIVED
+}
+
 model AdminUser {
-  id                 String   @id @default(cuid())
-  email              String   @unique
-  name               String
-  passwordHash       String
-  mustChangePassword Boolean  @default(false)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  id                      String                       @id @default(cuid())
+  email                   String                       @unique
+  name                    String
+  passwordHash            String
+  mustChangePassword      Boolean                      @default(false)
+  createdAt               DateTime                     @default(now())
+  updatedAt               DateTime                     @updatedAt
+  notificationPreferences AdminNotificationPreference[]
+}
+
+model AdminNotificationPreference {
+  id          String                 @id @default(cuid())
+  adminUserId String
+  adminUser   AdminUser              @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+  event       AdminNotificationEvent
+  enabled     Boolean                @default(true)
+
+  @@unique([adminUserId, event])
 }
 
 model AvailabilityRule {

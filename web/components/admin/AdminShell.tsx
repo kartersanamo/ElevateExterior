@@ -5,12 +5,12 @@ import { signOut } from "@/lib/auth";
 import { adminNavLinks } from "@/lib/admin-nav";
 import { site } from "@/lib/site-config";
 import {
+  Bell,
   ClipboardList,
   FileText,
   ImageIcon,
   LayoutDashboard,
   LogOut,
-  Mail,
   RefreshCw,
   Users,
   UserCircle,
@@ -24,7 +24,7 @@ const icons = {
   "/admin/customers": UserCircle,
   "/admin/recurring": RefreshCw,
   "/admin/gallery": ImageIcon,
-  "/admin/emails": Mail,
+  "/admin/notifications": Bell,
   "/admin/team": Users,
   "/admin/account": KeyRound,
 } as const;

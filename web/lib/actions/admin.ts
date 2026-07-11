@@ -4,6 +4,7 @@ import {
   sendBookingCancelledEmail,
   sendBookingConfirmedEmail,
 } from "@/lib/booking-mail";
+import { seedAdminNotificationPreferences } from "@/lib/admin-notifications";
 import { upsertCustomer } from "@/lib/customers";
 import { db } from "@/lib/db";
 import { runAutomationForBooking } from "@/lib/email/send";
@@ -167,7 +168,7 @@ export async function createAdminUser(data: {
   }
 
   const { hashPassword } = await import("@/lib/password");
-  await db.adminUser.create({
+  const admin = await db.adminUser.create({
     data: {
       name: data.name.trim(),
       email,
@@ -175,6 +176,8 @@ export async function createAdminUser(data: {
       mustChangePassword: true,
     },
   });
+
+  await seedAdminNotificationPreferences(admin.id);
 
   revalidatePath("/admin/team");
   return { ok: true, email };

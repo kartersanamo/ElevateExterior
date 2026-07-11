@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { wrapTemplateContent } from "@/lib/email/design";
 import { renderTemplate, type TemplateVars } from "@/lib/email/render";
 import { sendMail } from "@/lib/mailgun";
 import { formatDateLong, formatTime12 } from "@/lib/scheduling/dates";
@@ -13,7 +14,11 @@ export async function sendTemplateEmail(options: {
   manual?: boolean;
 }) {
   const subject = renderTemplate(options.template.subject, options.vars);
-  const html = renderTemplate(options.template.bodyHtml, options.vars);
+  const innerHtml = renderTemplate(options.template.bodyHtml, options.vars);
+  const html = wrapTemplateContent(innerHtml, {
+    previewText: subject,
+    title: subject,
+  });
   const text = options.template.bodyText
     ? renderTemplate(options.template.bodyText, options.vars)
     : undefined;
@@ -22,7 +27,7 @@ export async function sendTemplateEmail(options: {
     to: options.to,
     subject,
     html,
-    text: text ?? html.replace(/<[^>]+>/g, ""),
+    text: text ?? innerHtml.replace(/<[^>]+>/g, ""),
   });
 
   await db.emailSendLog.create({

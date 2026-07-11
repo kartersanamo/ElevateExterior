@@ -5,11 +5,11 @@ import { adminNavLinks } from "@/lib/admin-nav";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
+  Bell,
   ClipboardList,
   FileText,
   ImageIcon,
   LayoutDashboard,
-  Mail,
   Menu,
   RefreshCw,
   Users,
@@ -25,7 +25,7 @@ const icons = {
   "/admin/customers": UserCircle,
   "/admin/recurring": RefreshCw,
   "/admin/gallery": ImageIcon,
-  "/admin/emails": Mail,
+  "/admin/notifications": Bell,
   "/admin/team": Users,
   "/admin/account": KeyRound,
 } as const;
