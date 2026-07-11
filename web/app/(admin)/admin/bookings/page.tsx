@@ -87,17 +87,7 @@ export default async function AdminBookingsPage({
         Calendar, scheduling settings, and booking details in one place.
       </p>
 
-      <div className="mt-8">
-        <AdminCalendar />
-      </div>
-
-      <AvailabilityManager
-        rules={rulesWithNames}
-        blocked={blockedFormatted}
-        slotDurationMinutes={settings?.slotDurationMinutes ?? 180}
-      />
-
-      <div className="mt-10 flex flex-wrap gap-2">
+      <div className="mt-8 flex flex-wrap gap-2">
         {["ALL", "PENDING", "CONFIRMED", "COMPLETED", "CANCELLED"].map(
           (s) => (
             <a
@@ -186,6 +176,16 @@ export default async function AdminBookingsPage({
           })
         )}
       </div>
+
+      <div className="mt-10">
+        <AdminCalendar />
+      </div>
+
+      <AvailabilityManager
+        rules={rulesWithNames}
+        blocked={blockedFormatted}
+        slotDurationMinutes={settings?.slotDurationMinutes ?? 180}
+      />
     </div>
   );
 }
