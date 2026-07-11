@@ -1,5 +1,6 @@
 "use client";
 
+import { BillBuilder } from "@/components/admin/BillBuilder";
 import { completeBooking } from "@/lib/actions/complete-booking";
 import Image from "next/image";
 import Link from "next/link";
@@ -9,14 +10,17 @@ import { useState, useTransition } from "react";
 export function CompleteBookingForm({
   bookingId,
   customerName,
+  serviceDescription,
+  quotedAmountCents,
 }: {
   bookingId: string;
   customerName: string;
+  serviceDescription: string;
+  quotedAmountCents: number | null;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState("");
-  const [amount, setAmount] = useState("");
   const [previews, setPreviews] = useState<string[]>([]);
 
   const onFiles = (files: FileList | null) => {
@@ -30,7 +34,7 @@ export function CompleteBookingForm({
     setError("");
     startTransition(async () => {
       try {
-        const result = await completeBooking(bookingId, formData);
+        await completeBooking(bookingId, formData);
         router.push(`/admin/jobs/${bookingId}`);
         router.refresh();
       } catch (e) {
@@ -73,25 +77,10 @@ export function CompleteBookingForm({
         ) : null}
       </section>
 
-      <section className="rounded-2xl border border-slate/10 bg-white p-6">
-        <h2 className="font-display text-lg font-bold text-forest">Amount charged</h2>
-        <p className="mt-1 text-sm text-slate/60">
-          The customer will be able to pay this amount online via Stripe.
-        </p>
-        <div className="relative mt-4 max-w-xs">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate/50">$</span>
-          <input
-            type="text"
-            name="amount"
-            inputMode="decimal"
-            required
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            placeholder="0.00"
-            className="w-full rounded-lg border border-slate/20 py-2 pl-8 pr-3"
-          />
-        </div>
-      </section>
+      <BillBuilder
+        initialDescription={serviceDescription}
+        initialAmountCents={quotedAmountCents}
+      />
 
       <div className="flex flex-wrap gap-3">
         <button

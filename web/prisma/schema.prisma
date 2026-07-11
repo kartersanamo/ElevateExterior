@@ -123,6 +123,8 @@ model Booking {
   stripePriceId           String?
   invoiceNumber           String?
   invoiceHtml             String?
+  invoiceLineItems        String?
+  invoiceDiscount         String?
   reviewRequestSentAt     DateTime?
   reviewDiscountCode      String?       @unique
   reviewDiscountClaimedAt DateTime?

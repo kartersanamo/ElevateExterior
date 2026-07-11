@@ -71,6 +71,11 @@ const sampleBookingRecord: Booking = {
   amountChargedCents: 42500,
   invoiceNumber: "INV-20260718-SAMPLE",
   invoiceHtml: null,
+  invoiceLineItems: JSON.stringify([
+    { description: "House Soft Washing", amountCents: 32500 },
+    { description: "Driveway & Concrete", amountCents: 10000 },
+  ]),
+  invoiceDiscount: null,
   paidAt: new Date("2026-07-18"),
   completedAt: new Date("2026-07-18"),
   reviewRequestSentAt: null,

@@ -1,4 +1,11 @@
 import { formatCents } from "@/lib/recurring";
+import {
+  calculateDiscountCents,
+  calculateSubtotalCents,
+  parseBillDiscountJson,
+  parseBillLineItemsJson,
+  type BillLineItem,
+} from "@/lib/invoice-bill";
 import { services, site } from "@/lib/site-config";
 import { emailColors, escapeHtml } from "@/lib/email/design";
 import type { Booking } from "@prisma/client";
@@ -33,6 +40,44 @@ function formatTime(time: string): string {
   return `${hour}:${String(min).padStart(2, "0")} ${period}`;
 }
 
+function resolveInvoiceLineItems(booking: Booking): BillLineItem[] {
+  if (booking.invoiceLineItems) {
+    try {
+      const parsed = parseBillLineItemsJson(JSON.parse(booking.invoiceLineItems));
+      if (parsed.length > 0) return parsed;
+    } catch {
+      // Fall back to legacy single-line invoice.
+    }
+  }
+
+  return [
+    {
+      description: serviceLabels(booking.services),
+      amountCents: booking.amountChargedCents ?? 0,
+    },
+  ];
+}
+
+function resolveInvoiceDiscount(booking: Booking) {
+  if (!booking.invoiceDiscount) return null;
+  try {
+    return parseBillDiscountJson(JSON.parse(booking.invoiceDiscount));
+  } catch {
+    return null;
+  }
+}
+
+function buildLineItemRows(lineItems: BillLineItem[]): string {
+  return lineItems
+    .map(
+      (item) => `<tr>
+            <td style="padding:12px 0;border-top:1px solid ${emailColors.border};font-family:${fontBody};font-size:15px;color:${emailColors.slate};">${escapeHtml(item.description)}</td>
+            <td align="right" style="padding:12px 0;border-top:1px solid ${emailColors.border};font-family:${fontBody};font-size:15px;color:${emailColors.slate};">${formatCents(item.amountCents)}</td>
+          </tr>`
+    )
+    .join("");
+}
+
 export function generateInvoiceNumber(bookingId: string): string {
   const date = new Date();
   const stamp = [
@@ -48,8 +93,11 @@ export function buildInvoiceSection(
   invoiceNumber: string,
   paidAt: Date
 ): string {
-  const serviceLine = serviceLabels(booking.services);
-  const amount = formatCents(booking.amountChargedCents ?? 0);
+  const lineItems = resolveInvoiceLineItems(booking);
+  const discount = resolveInvoiceDiscount(booking);
+  const subtotalCents = calculateSubtotalCents(lineItems);
+  const discountCents = calculateDiscountCents(subtotalCents, discount);
+  const totalCents = booking.amountChargedCents ?? Math.max(0, subtotalCents - discountCents);
   const paidDate = paidAt.toLocaleDateString("en-US", {
     month: "long",
     day: "numeric",
@@ -93,13 +141,18 @@ export function buildInvoiceSection(
             <td style="padding:14px 0;font-family:${fontBody};font-size:13px;font-weight:600;color:${emailColors.slateMuted};text-transform:uppercase;letter-spacing:0.06em;">Description</td>
             <td align="right" style="padding:14px 0;font-family:${fontBody};font-size:13px;font-weight:600;color:${emailColors.slateMuted};text-transform:uppercase;letter-spacing:0.06em;">Amount</td>
           </tr>
-          <tr>
-            <td style="padding:12px 0;border-top:1px solid ${emailColors.border};font-family:${fontBody};font-size:15px;color:${emailColors.slate};">${escapeHtml(serviceLine)}</td>
-            <td align="right" style="padding:12px 0;border-top:1px solid ${emailColors.border};font-family:${fontBody};font-size:15px;color:${emailColors.slate};">${amount}</td>
-          </tr>
+          ${buildLineItemRows(lineItems)}
+          ${
+            discountCents > 0
+              ? `<tr>
+            <td style="padding:12px 0;border-top:1px solid ${emailColors.border};font-family:${fontBody};font-size:15px;color:${emailColors.teal};">Discount</td>
+            <td align="right" style="padding:12px 0;border-top:1px solid ${emailColors.border};font-family:${fontBody};font-size:15px;color:${emailColors.teal};">-${formatCents(discountCents)}</td>
+          </tr>`
+              : ""
+          }
           <tr>
             <td style="padding:16px 0 0;border-top:2px solid ${emailColors.forest};font-family:${fontDisplay};font-size:18px;font-weight:700;color:${emailColors.forest};">Total</td>
-            <td align="right" style="padding:16px 0 0;border-top:2px solid ${emailColors.forest};font-family:${fontDisplay};font-size:18px;font-weight:700;color:${emailColors.forest};">${amount}</td>
+            <td align="right" style="padding:16px 0 0;border-top:2px solid ${emailColors.forest};font-family:${fontDisplay};font-size:18px;font-weight:700;color:${emailColors.forest};">${formatCents(totalCents)}</td>
           </tr>
         </table>
 

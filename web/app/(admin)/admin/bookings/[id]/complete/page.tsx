@@ -1,4 +1,5 @@
 import { CompleteBookingForm } from "@/components/admin/CompleteBookingForm";
+import { serviceLabels } from "@/lib/bookings-admin";
 import { db } from "@/lib/db";
 import { notFound, redirect } from "next/navigation";
 
@@ -10,7 +11,10 @@ export default async function CompleteBookingPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const booking = await db.booking.findUnique({ where: { id } });
+  const booking = await db.booking.findUnique({
+    where: { id },
+    include: { quoteRequest: true },
+  });
 
   if (!booking) notFound();
   if (booking.status === "COMPLETED") redirect(`/admin/jobs/${id}`);
@@ -22,7 +26,14 @@ export default async function CompleteBookingPage({
       <p className="mt-2 text-slate/70">
         {booking.customerName} — upload photos and confirm the amount charged.
       </p>
-      <CompleteBookingForm bookingId={booking.id} customerName={booking.customerName} />
+      <CompleteBookingForm
+        bookingId={booking.id}
+        customerName={booking.customerName}
+        serviceDescription={serviceLabels(booking.services)}
+        quotedAmountCents={
+          booking.amountChargedCents ?? booking.quoteRequest?.quotedAmountCents ?? null
+        }
+      />
     </div>
   );
 }

@@ -4,7 +4,11 @@ import { auth } from "@/lib/auth";
 import { upsertCustomer } from "@/lib/customers";
 import { db } from "@/lib/db";
 import { sendJobCompletedEmail } from "@/lib/job-mail";
-import { parseDollarsToCents } from "@/lib/recurring";
+import {
+  parseBillFromFormData,
+  serializeBillDiscount,
+  serializeBillLineItems,
+} from "@/lib/invoice-bill";
 import { syncJobPhotosToGallery } from "@/lib/gallery";
 import { saveJobPhotos } from "@/lib/uploads";
 import { generatePublicToken } from "@/lib/tokens";
@@ -24,11 +28,7 @@ export async function completeBooking(bookingId: string, formData: FormData) {
     throw new Error("Only confirmed bookings can be marked complete.");
   }
 
-  const amountRaw = formData.get("amount");
-  if (typeof amountRaw !== "string") {
-    throw new Error("Amount is required.");
-  }
-  const amountChargedCents = parseDollarsToCents(amountRaw);
+  const { lineItems, discount, amountChargedCents } = parseBillFromFormData(formData);
 
   const files = formData.getAll("photos");
   const photoFiles = files.filter((f): f is File => f instanceof File);
@@ -54,6 +54,8 @@ export async function completeBooking(bookingId: string, formData: FormData) {
       data: {
         status: "COMPLETED",
         amountChargedCents,
+        invoiceLineItems: serializeBillLineItems(lineItems),
+        invoiceDiscount: serializeBillDiscount(discount) || null,
         completedAt: new Date(),
         publicToken,
       },
