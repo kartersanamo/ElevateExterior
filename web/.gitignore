@@ -35,6 +35,7 @@ yarn-error.log*
 # prisma
 prisma/*.db
 prisma/*.db-journal
+prisma/data/
 data/
 
 # typescript

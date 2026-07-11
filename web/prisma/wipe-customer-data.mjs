@@ -20,18 +20,15 @@ import { PrismaClient } from "@prisma/client";
 import { execSync } from "child_process";
 import { readdir, rm, unlink } from "fs/promises";
 import path from "path";
+import { getDataDir, resolveDatabaseUrl } from "./data-dir.mjs";
 
 const JOB_GALLERY_CATEGORY = "Completed Jobs";
 const CONTAINER_NAME = "elevate-exterior";
 
-const db = new PrismaClient();
+const db = new PrismaClient({
+  datasources: { db: { url: resolveDatabaseUrl() } },
+});
 const confirm = process.argv.includes("--confirm");
-
-function getDataDir() {
-  const dbUrl = process.env.DATABASE_URL ?? "file:./data/db.sqlite";
-  const dbPath = dbUrl.replace(/^file:/, "");
-  return path.resolve(path.dirname(dbPath));
-}
 
 function getUploadsRoot() {
   return path.join(getDataDir(), "uploads");

@@ -1,6 +1,7 @@
 import { copyFile, mkdir, writeFile, readFile } from "fs/promises";
 import path from "path";
 import { randomUUID } from "crypto";
+import { getDataDir } from "@/lib/data-dir";
 
 const ALLOWED_TYPES = new Set([
   "image/jpeg",
@@ -13,10 +14,7 @@ const ALLOWED_TYPES = new Set([
 const MAX_BYTES = 10 * 1024 * 1024;
 
 export function getUploadsRoot(): string {
-  const dbUrl = process.env.DATABASE_URL ?? "file:./data/db.sqlite";
-  const dbPath = dbUrl.replace(/^file:/, "");
-  const dataDir = path.dirname(dbPath);
-  return path.join(dataDir, "uploads");
+  return path.join(getDataDir(), "uploads");
 }
 
 export function getJobPhotoDir(bookingId: string): string {
