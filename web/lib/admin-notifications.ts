@@ -22,6 +22,7 @@ export const ADMIN_NOTIFICATION_EVENTS: AdminNotificationEvent[] = [
   "CUSTOMER_RESCHEDULED",
   "CUSTOMER_CANCELLED",
   "PAYMENT_RECEIVED",
+  "REVIEW_DISCOUNT_CLAIMED",
 ];
 
 export const ADMIN_NOTIFICATION_DEFINITIONS: AdminNotificationDefinition[] = [
@@ -65,6 +66,12 @@ export const ADMIN_NOTIFICATION_DEFINITIONS: AdminNotificationDefinition[] = [
     event: "PAYMENT_RECEIVED",
     label: "Payment received",
     description: "A customer pays an invoice through Stripe.",
+    category: "payments",
+  },
+  {
+    event: "REVIEW_DISCOUNT_CLAIMED",
+    label: "Review discount claimed",
+    description: "A customer claims their 10% off code after leaving a Google review.",
     category: "payments",
   },
 ];

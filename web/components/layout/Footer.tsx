@@ -1,7 +1,7 @@
 import { SiteLogo } from "@/components/brand/SiteLogo";
 import { ButtonLink } from "@/components/ui/Button";
 import { navLinks, services, site } from "@/lib/site-config";
-import { Mail, MapPin, Phone } from "lucide-react";
+import { Mail, MapPin, Phone, Star } from "lucide-react";
 import Link from "next/link";
 
 export function Footer() {
@@ -104,6 +104,19 @@ export function Footer() {
                   {site.email}
                 </a>
               </li>
+              <li className="flex gap-3">
+                <Star
+                  size={16}
+                  className="mt-0.5 shrink-0 text-teal-light"
+                  aria-hidden
+                />
+                <Link
+                  href="/review"
+                  className="transition-colors hover:text-teal-light"
+                >
+                  Leave a review
+                </Link>
+              </li>
             </ul>
           </div>
         </div>
@@ -120,6 +133,9 @@ export function Footer() {
             </Link>
             <Link href="/terms" className="hover:text-teal-light">
               Terms
+            </Link>
+            <Link href="/review" className="hover:text-teal-light">
+              Leave a review
             </Link>
             <span>{site.serviceArea}</span>
           </div>

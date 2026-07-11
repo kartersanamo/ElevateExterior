@@ -14,6 +14,10 @@ import {
   wrapTemplateContent,
 } from "@/lib/email/design";
 import { buildInvoiceSection } from "@/lib/invoice";
+import {
+  buildReviewRewardEmailSection,
+  reviewClaimUrl,
+} from "@/lib/review-reward";
 import { site } from "@/lib/site-config";
 import type { Booking } from "@prisma/client";
 
@@ -70,6 +74,9 @@ const sampleBookingRecord: Booking = {
   paidAt: new Date("2026-07-18"),
   completedAt: new Date("2026-07-18"),
   reviewRequestSentAt: null,
+  reviewDiscountCode: null,
+  reviewDiscountClaimedAt: null,
+  reviewDiscountRedeemedAt: null,
   stripeCheckoutSessionId: null,
   notes: null,
   createdAt: new Date(),
@@ -248,6 +255,7 @@ export function generateAllEmailPreviews(): EmailPreview[] {
           buttonGroup([{ label: "View job summary", href: appointmentUrl }]),
           emailDivider(),
           buildInvoiceSection(sampleBookingRecord, "INV-20260718-SAMPLE", new Date("2026-07-18")),
+          buildReviewRewardEmailSection(reviewUrl, reviewClaimUrl("sample-token-abc")),
           emailSignature(),
         ].join(""),
         { previewText: "Payment received" }
@@ -264,7 +272,7 @@ export function generateAllEmailPreviews(): EmailPreview[] {
           emailHeading("How did we do?"),
           emailGreeting(sampleBooking.customerName),
           statusPanel("success", "Service complete", "We hope your home looks amazing."),
-          buttonGroup([{ label: "Leave a Google review", href: reviewUrl }]),
+          buttonGroup([{ label: "Leave a Google review", href: `${siteUrl}/review` }]),
           emailSignature(),
         ].join(""),
         { previewText: "We'd love your feedback" }

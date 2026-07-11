@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { formatCents, frequencyLabel } from "@/lib/recurring";
 import { services } from "@/lib/site-config";
 import { getSiteUrl } from "@/lib/stripe";
+import { ReviewDiscountAdminPanel } from "@/components/admin/ReviewDiscountAdminPanel";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -130,6 +131,13 @@ export default async function AdminJobPage({
             Manage recurring services →
           </Link>
         </section>
+
+        <ReviewDiscountAdminPanel
+          bookingId={booking.id}
+          reviewDiscountCode={booking.reviewDiscountCode}
+          reviewDiscountClaimedAt={booking.reviewDiscountClaimedAt}
+          reviewDiscountRedeemedAt={booking.reviewDiscountRedeemedAt}
+        />
       </div>
 
       {booking.photos.length > 0 ? (

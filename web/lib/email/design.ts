@@ -274,6 +274,15 @@ export function linkFallback(label: string, href: string): string {
   return `<p style="margin:0 0 16px;font-family:${fontBody};font-size:13px;line-height:1.6;color:${emailColors.slateMuted};">${escapeHtml(label)}<br /><a href="${escapeHtml(href)}" style="color:${emailColors.teal};word-break:break-all;">${escapeHtml(href)}</a></p>`;
 }
 
+export function emailReviewHint(reviewPageUrl: string): string {
+  const safeUrl = escapeHtml(reviewPageUrl);
+  return `<p style="margin:24px 0 0;font-family:${fontBody};font-size:14px;line-height:1.6;color:${emailColors.slateMuted};">Enjoyed working with us? <a href="${safeUrl}" style="color:${emailColors.teal};font-weight:600;">Leave a review</a>.</p>`;
+}
+
+export function textReviewHint(reviewPageUrl: string): string {
+  return `\nEnjoyed working with us? Leave a review: ${reviewPageUrl}`;
+}
+
 export function wrapBrandedContent(
   content: string,
   options?: Omit<EmailDocumentOptions, "content">

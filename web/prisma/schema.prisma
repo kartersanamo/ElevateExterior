@@ -51,6 +51,7 @@ enum AdminNotificationEvent {
   CUSTOMER_RESCHEDULED
   CUSTOMER_CANCELLED
   PAYMENT_RECEIVED
+  REVIEW_DISCOUNT_CLAIMED
 }
 
 model AdminUser {
@@ -121,6 +122,9 @@ model Booking {
   invoiceNumber           String?
   invoiceHtml             String?
   reviewRequestSentAt     DateTime?
+  reviewDiscountCode      String?       @unique
+  reviewDiscountClaimedAt DateTime?
+  reviewDiscountRedeemedAt DateTime?
   createdAt               DateTime      @default(now())
   updatedAt               DateTime      @updatedAt
 

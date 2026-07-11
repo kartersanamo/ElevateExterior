@@ -13,6 +13,7 @@ import {
   wrapBrandedContent,
 } from "@/lib/email/design";
 import { getGoogleReviewUrl } from "@/lib/google-review";
+import { reviewPageUrl } from "@/lib/review-reward";
 import { sendMail } from "@/lib/mailgun";
 import { sendSms } from "@/lib/sms";
 import { site } from "@/lib/site-config";
@@ -21,6 +22,8 @@ import type { Booking } from "@prisma/client";
 export async function sendReviewRequest(booking: Booking): Promise<void> {
   const reviewUrl = await getGoogleReviewUrl();
   if (!reviewUrl) return;
+
+  const reviewPage = reviewPageUrl();
 
   const html = wrapBrandedContent(
     [
@@ -35,8 +38,8 @@ export async function sendReviewRequest(booking: Booking): Promise<void> {
       emailParagraph(
         "If you have a moment, we'd love a quick Google review. It helps neighbors find us and keeps our team motivated."
       ),
-      buttonGroup([{ label: "Leave a Google review", href: reviewUrl }]),
-      linkFallback("Or copy this link:", reviewUrl),
+      buttonGroup([{ label: "Leave a Google review", href: reviewPage }]),
+      linkFallback("Or copy this link:", reviewPage),
       emailSignature(),
     ].join(""),
     {
@@ -49,7 +52,7 @@ export async function sendReviewRequest(booking: Booking): Promise<void> {
 
 Thank you for choosing ${site.name}! If you have a moment, we'd love a Google review:
 
-${textButton("Leave a review", reviewUrl)}
+${textButton("Leave a review", reviewPage)}
 
 Your feedback helps our small business grow.${textSignature()}${textFooter()}`;
 
@@ -62,6 +65,6 @@ Your feedback helps our small business grow.${textSignature()}${textFooter()}`;
 
   await sendSms({
     to: booking.customerPhone,
-    body: `Thanks for choosing ${site.shortName}! We'd love a quick Google review: ${reviewUrl}`,
+    body: `Thanks for choosing ${site.shortName}! We'd love a quick Google review: ${reviewPage}`,
   });
 }

@@ -6,6 +6,7 @@ import {
   emailHeading,
   emailParagraph,
   emailSignature,
+  emailReviewHint,
   linkFallback,
   messageBlock,
   statusPanel,
@@ -13,11 +14,13 @@ import {
   textDetailBlock,
   textDivider,
   textFooter,
+  textReviewHint,
   textSignature,
   wrapBrandedContent,
 } from "@/lib/email/design";
 import { getAdminNotificationRecipients } from "@/lib/admin-notifications";
 import { sendMail } from "@/lib/mailgun";
+import { reviewPageUrl } from "@/lib/review-reward";
 import { site } from "@/lib/site-config";
 import { sendSms } from "@/lib/sms";
 import { getSiteUrl } from "@/lib/stripe";
@@ -198,6 +201,7 @@ export async function sendBookingConfirmedEmail(
       emailParagraph(
         `See you then! Questions? Call <a href="${site.phoneHref}" style="color:#0098e3;font-weight:600;text-decoration:none;">${site.phone}</a>.`
       ),
+      emailReviewHint(reviewPageUrl()),
       emailSignature(),
     ].join(""),
     {
@@ -215,7 +219,7 @@ ${bookingDetailsText(payload)}
 ${textDivider()}
 ${link ? `\n${textButton("Manage your appointment", link)}` : ""}
 
-See you then! Questions? Call ${site.phone}.${textSignature()}${textFooter()}`;
+See you then! Questions? Call ${site.phone}.${textReviewHint(reviewPageUrl())}${textSignature()}${textFooter()}`;
 
   await sendMail({
     to: [payload.customerEmail],

@@ -8,6 +8,8 @@ import {
   emailParagraph,
   emailSignature,
   linkFallback,
+  emailReviewHint,
+  textReviewHint,
   statusPanel,
   textButton,
   textDetailBlock,
@@ -19,6 +21,13 @@ import {
 import { getAdminNotificationRecipients } from "@/lib/admin-notifications";
 import { sendMail } from "@/lib/mailgun";
 import { formatCents } from "@/lib/recurring";
+import { getGoogleReviewUrl } from "@/lib/google-review";
+import {
+  buildReviewRewardEmailSection,
+  buildReviewRewardPlainText,
+  reviewClaimUrl,
+  reviewPageUrl,
+} from "@/lib/review-reward";
 import { sendSms } from "@/lib/sms";
 import { appointmentUrl } from "@/lib/urls";
 import { site } from "@/lib/site-config";
@@ -54,6 +63,7 @@ export async function sendJobCompletedEmail(booking: Booking): Promise<void> {
         { label: "Schedule recurring", href: recurringUrl, variant: "secondary" },
       ]),
       linkFallback("View your job summary & photos:", url),
+      emailReviewHint(reviewPageUrl()),
       emailSignature(),
     ].join(""),
     {
@@ -68,7 +78,7 @@ Your exterior cleaning is complete! View photos, pay your invoice (${amount}), o
 
 ${textButton("View job summary", url)}
 ${textButton("Pay now", payUrl)}
-${textButton("Set up recurring service", recurringUrl)}${textSignature()}${textFooter()}`;
+${textButton("Set up recurring service", recurringUrl)}${textReviewHint(reviewPageUrl())}${textSignature()}${textFooter()}`;
 
   await sendMail({
     to: [booking.customerEmail],
@@ -88,6 +98,19 @@ export async function sendInvoiceEmail(
   invoiceSectionHtml: string
 ): Promise<void> {
   const jobUrl = booking.publicToken ? jobPageUrl(booking.publicToken) : null;
+  const reviewUrl = await getGoogleReviewUrl();
+  const claimUrl =
+    booking.publicToken && reviewUrl
+      ? reviewClaimUrl(booking.publicToken)
+      : null;
+  const reviewRewardHtml =
+    reviewUrl && claimUrl
+      ? buildReviewRewardEmailSection(reviewUrl, claimUrl)
+      : "";
+  const reviewRewardText =
+    reviewUrl && claimUrl
+      ? buildReviewRewardPlainText(reviewUrl, claimUrl)
+      : "";
 
   const html = wrapBrandedContent(
     [
@@ -101,6 +124,7 @@ export async function sendInvoiceEmail(
       jobUrl ? linkFallback("Or copy this link:", jobUrl) : "",
       emailDivider(),
       invoiceSectionHtml,
+      reviewRewardHtml,
       emailSignature(),
     ].join(""),
     {
@@ -113,7 +137,7 @@ export async function sendInvoiceEmail(
 
 Thank you for your payment! Your invoice ${booking.invoiceNumber} is attached below.
 
-${jobUrl ? textButton("View job summary", jobUrl) : ""}${textSignature()}${textFooter()}`;
+${jobUrl ? textButton("View job summary", jobUrl) : ""}${reviewRewardText}${textSignature()}${textFooter()}`;
 
   await sendMail({
     to: [booking.customerEmail],

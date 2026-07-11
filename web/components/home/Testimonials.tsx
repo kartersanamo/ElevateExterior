@@ -1,4 +1,5 @@
 import { AnimateIn } from "@/components/ui/AnimateIn";
+import { ButtonLink } from "@/components/ui/Button";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { testimonials } from "@/lib/site-config";
 import { Quote } from "lucide-react";
@@ -31,6 +32,19 @@ export function Testimonials() {
               </blockquote>
             </AnimateIn>
           ))}
+        </div>
+        <div className="mt-12 text-center">
+          <p className="text-white/70">
+            Had a great experience? We&apos;d love to hear from you.
+          </p>
+          <ButtonLink
+            href="/review"
+            variant="inverse"
+            size="lg"
+            className="mt-6"
+          >
+            Leave a Google review
+          </ButtonLink>
         </div>
       </div>
     </section>

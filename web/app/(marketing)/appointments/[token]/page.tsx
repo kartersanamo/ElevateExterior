@@ -2,7 +2,9 @@ import { CancelAppointment } from "@/components/appointments/CancelAppointment";
 import { AppointmentUpcoming } from "@/components/appointments/AppointmentUpcoming";
 import { ReschedulePanel } from "@/components/appointments/ReschedulePanel";
 import { JobActions } from "@/components/jobs/JobActions";
+import { ReviewRewardSection } from "@/components/jobs/ReviewRewardSection";
 import { db } from "@/lib/db";
+import { getGoogleReviewUrl } from "@/lib/google-review";
 import { confirmBookingPaymentFromReturn } from "@/lib/payments";
 import { formatCents } from "@/lib/recurring";
 import { site, services } from "@/lib/site-config";
@@ -110,6 +112,7 @@ export default async function AppointmentPage({
   }
 
   const completedBooking = (await loadBooking(token)) ?? booking;
+  const googleReviewUrl = await getGoogleReviewUrl();
 
   return (
     <div className="min-h-screen-safe bg-mint/30 page-top pb-16 safe-bottom">
@@ -175,7 +178,7 @@ export default async function AppointmentPage({
           </section>
         ) : null}
 
-        <div className="mt-8">
+        <div className="mt-8 space-y-6">
           <Suspense fallback={null}>
             <JobActions
               token={token}
@@ -184,6 +187,13 @@ export default async function AppointmentPage({
               hasRecurring={Boolean(completedBooking.recurringService)}
             />
           </Suspense>
+
+          <ReviewRewardSection
+            token={token}
+            googleReviewUrl={googleReviewUrl}
+            reviewDiscountCode={completedBooking.reviewDiscountCode}
+            paid={Boolean(completedBooking.paidAt)}
+          />
         </div>
 
         {completedBooking.invoiceHtml ? (
