@@ -1,9 +1,9 @@
 import { db } from "@/lib/db";
+import { JOB_GALLERY_CATEGORY } from "@/lib/gallery-constants";
 import { copyJobPhotoToGallery } from "@/lib/uploads";
 import { galleryImages as defaultImages, services } from "@/lib/site-config";
 
-/** Category used for gallery images auto-added from completed jobs. */
-export const JOB_GALLERY_CATEGORY = "Completed Jobs";
+export { JOB_GALLERY_CATEGORY };
 
 function formatBookingServices(servicesJson: string): string {
   try {

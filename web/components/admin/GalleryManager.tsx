@@ -6,7 +6,7 @@ import {
   reorderGalleryImage,
   updateGalleryImage,
 } from "@/lib/actions/gallery";
-import { JOB_GALLERY_CATEGORY } from "@/lib/gallery";
+import { JOB_GALLERY_CATEGORY } from "@/lib/gallery-constants";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
