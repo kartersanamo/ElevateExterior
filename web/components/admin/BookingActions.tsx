@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import type { BookingStatus } from "@prisma/client";
+import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { updateBookingStatus } from "@/lib/actions/admin";
 
@@ -12,11 +13,13 @@ export function BookingActions({
   bookingId: string;
   status: BookingStatus;
 }) {
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
 
   const act = (newStatus: BookingStatus) => {
     startTransition(async () => {
       await updateBookingStatus(bookingId, newStatus);
+      router.refresh();
     });
   };
 
