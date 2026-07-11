@@ -1,5 +1,4 @@
 import { getContactRecipients, sendMail } from "@/lib/mailgun";
-import { formatCents } from "@/lib/recurring";
 import { sendSms } from "@/lib/sms";
 import { getSiteUrl } from "@/lib/stripe";
 import { site, services } from "@/lib/site-config";
@@ -122,37 +121,20 @@ export async function sendQuoteToCustomer(quote: QuoteRequest): Promise<void> {
   }
 
   const url = quoteUrl(quote.publicToken);
-  const amount = formatCents(quote.quotedAmountCents);
-  const serviceLine = serviceLabels(quote.services);
-  const scheduleLine =
-    quote.proposedDate && quote.proposedStartTime
-      ? `Proposed: ${formatDate(quote.proposedDate)} at ${formatTime(quote.proposedStartTime)}`
-      : "You will pick a time when you accept.";
 
   await sendMail({
     to: [quote.customerEmail],
-    subject: `Your quote from ${site.shortName} — ${amount}`,
+    subject: `Your quote from ${site.shortName}`,
     text: `Hi ${quote.customerName},
 
-Here is your quote from ${site.name}:
-
-Services: ${serviceLine}
-Amount: ${amount}
-${scheduleLine}
-${quote.quoteNotes ? `\nNotes: ${quote.quoteNotes}` : ""}
+Your quote from ${site.name} is ready. Open the link below to review the full details and accept it on our website.
 
 Review and accept: ${url}
 
 — ${site.name}`,
     html: `
 <p>Hi ${quote.customerName},</p>
-<p>Here is your quote from <strong>${site.name}</strong>:</p>
-<ul>
-  <li><strong>Services:</strong> ${serviceLine}</li>
-  <li><strong>Amount:</strong> ${amount}</li>
-  <li><strong>Schedule:</strong> ${scheduleLine}</li>
-</ul>
-${quote.quoteNotes ? `<p>${quote.quoteNotes.replace(/\n/g, "<br />")}</p>` : ""}
+<p>Your quote from <strong>${site.name}</strong> is ready. Click the button below to review the full details and accept it on our website.</p>
 <p style="margin:24px 0;">
   <a href="${url}" style="display:inline-block;background:#0098e3;color:#fff;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:700;">Review &amp; accept quote</a>
 </p>
@@ -161,7 +143,7 @@ ${quote.quoteNotes ? `<p>${quote.quoteNotes.replace(/\n/g, "<br />")}</p>` : ""}
 
   await sendSms({
     to: quote.customerPhone,
-    body: `Your quote from ${site.shortName} is ready (${amount}). Review: ${url}`,
+    body: `Your quote from ${site.shortName} is ready. Review: ${url}`,
   });
 }
 
