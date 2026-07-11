@@ -5,6 +5,8 @@ import { site } from "@/lib/site-config";
 import { Star } from "lucide-react";
 import Link from "next/link";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Leave a Review",
   description: `Share your experience with ${site.name} on Google. Your feedback helps neighbors find trusted exterior cleaning.`,

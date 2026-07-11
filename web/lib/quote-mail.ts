@@ -64,8 +64,26 @@ function preferredScheduleLine(quote: QuoteRequest): string {
   return "Not specified";
 }
 
+function quoteSourceLabel(source: string): string {
+  if (source === "angi") return "Angi";
+  return "Website";
+}
+
+function quoteSourceEyebrow(source: string): string {
+  if (source === "angi") return "New Angi lead";
+  return "New quote request";
+}
+
+function quoteSourceIntro(source: string): string {
+  if (source === "angi") {
+    return "A new lead just arrived from Angi.";
+  }
+  return "A new quote request just came in from your website.";
+}
+
 function quoteDetailRows(quote: QuoteRequest) {
   return [
+    { label: "Source", value: quoteSourceLabel(quote.source) },
     { label: "Customer", value: quote.customerName },
     { label: "Email", value: quote.customerEmail },
     { label: "Phone", value: quote.customerPhone ?? "Not provided" },
@@ -86,21 +104,21 @@ export async function sendQuoteRequestNotification(
 
   const html = wrapBrandedContent(
     [
-      emailEyebrow("New quote request"),
+      emailEyebrow(quoteSourceEyebrow(quote.source)),
       emailHeading("Quote request received"),
-      emailParagraph("A new quote request just came in from your website."),
+      emailParagraph(quoteSourceIntro(quote.source)),
       detailCard("Request details", rows),
       quote.message ? messageBlock(quote.message) : "",
       buttonGroup([{ label: "Review in admin", href: adminUrl }]),
       linkFallback("Or open this link:", adminUrl),
     ].join(""),
     {
-      previewText: `New quote request from ${quote.customerName}`,
-      title: `New quote request — ${quote.customerName}`,
+      previewText: `${quoteSourceEyebrow(quote.source)} from ${quote.customerName}`,
+      title: `${quoteSourceEyebrow(quote.source)} — ${quote.customerName}`,
     }
   );
 
-  const text = `New quote request from ${quote.customerName} (${quote.customerEmail})
+  const text = `${quoteSourceEyebrow(quote.source)} from ${quote.customerName} (${quote.customerEmail})
 
 ${textDivider()}
 ${textDetailBlock("Request details", rows)}
@@ -111,7 +129,7 @@ ${textButton("Review in admin", adminUrl)}${textFooter()}`;
 
   await sendMail({
     to: recipients,
-    subject: `New quote request — ${quote.customerName}`,
+    subject: `${quoteSourceEyebrow(quote.source)} — ${quote.customerName}`,
     text,
     html,
     replyTo: quote.customerEmail,

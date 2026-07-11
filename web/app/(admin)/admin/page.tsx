@@ -4,6 +4,16 @@ import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
+function quoteSourceLabel(source: string): string {
+  if (source === "angi") return "Angi";
+  return "Website";
+}
+
+function quoteSourceBadgeClass(source: string): string {
+  if (source === "angi") return "bg-orange-100 text-orange-800";
+  return "bg-slate/10 text-slate/70";
+}
+
 function formatDate(date: Date): string {
   return date.toLocaleDateString("en-US", {
     weekday: "short",
@@ -231,7 +241,14 @@ export default async function AdminDashboardPage() {
                 key={q.id}
                 className="rounded-xl border border-amber-200 bg-amber-50 p-4"
               >
-                <p className="font-semibold text-forest">{q.customerName}</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="font-semibold text-forest">{q.customerName}</p>
+                  <span
+                    className={`rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase ${quoteSourceBadgeClass(q.source)}`}
+                  >
+                    {quoteSourceLabel(q.source)}
+                  </span>
+                </div>
                 <p className="text-sm text-slate/70">
                   {q.address ?? "No address"} · {q.customerEmail}
                 </p>
@@ -239,6 +256,10 @@ export default async function AdminDashboardPage() {
                   <p className="mt-1 text-sm text-slate/60">
                     Preferred: {formatDate(q.proposedDate)} at{" "}
                     {formatTime(q.proposedStartTime)}
+                  </p>
+                ) : q.source === "angi" ? (
+                  <p className="mt-1 text-sm text-slate/60">
+                    Preferred: Schedule when quoting
                   </p>
                 ) : null}
               </li>
