@@ -36,6 +36,22 @@ export function getBrandLogoUrl(): string {
   return `${getSiteUrl()}/logo.png`;
 }
 
+/** Square crop of the website logo — used as the email header avatar. */
+export function getBrandAvatarUrl(): string {
+  return `${getSiteUrl()}/logo-avatar.png`;
+}
+
+export const BRAND_LOGO_CID = "logo.png";
+export const BRAND_AVATAR_CID = "logo-avatar.png";
+
+export function applyInlineBrandImageCids(html: string): string {
+  return html
+    .split(getBrandAvatarUrl())
+    .join(`cid:${BRAND_AVATAR_CID}`)
+    .split(getBrandLogoUrl())
+    .join(`cid:${BRAND_LOGO_CID}`);
+}
+
 export interface DetailRow {
   label: string;
   value: string;
@@ -58,7 +74,7 @@ export function buildEmailDocument(options: EmailDocumentOptions): string {
     ? escapeHtml(options.previewText)
     : "";
   const title = escapeHtml(options.title ?? site.shortName);
-  const logoUrl = escapeHtml(getBrandLogoUrl());
+  const logoUrl = escapeHtml(getBrandAvatarUrl());
   const siteUrl = escapeHtml(getSiteUrl());
   const phoneHref = escapeHtml(site.phoneHref);
   const phone = escapeHtml(site.phone);
@@ -100,12 +116,17 @@ export function buildEmailDocument(options: EmailDocumentOptions): string {
             <td align="center" style="background-color:${emailColors.forest};border-radius:16px 16px 0 0;padding:28px 32px;">
               <table role="presentation" cellpadding="0" cellspacing="0" border="0">
                 <tr>
-                  <td align="center" style="padding-bottom:12px;">
-                    <img src="${logoUrl}" alt="${escapeHtml(site.name)}" width="220" height="143" style="display:block;width:220px;max-width:100%;height:auto;" />
+                  <td align="center" style="padding-bottom:14px;">
+                    <img src="${logoUrl}" alt="${escapeHtml(site.name)}" width="96" height="96" style="display:block;width:96px;height:96px;border-radius:50%;border:3px solid ${emailColors.tealLight};background-color:#000000;" />
                   </td>
                 </tr>
                 <tr>
-                  <td align="center" style="padding-top:4px;font-family:${fontBody};font-size:11px;font-weight:600;color:${emailColors.tealLight};text-transform:uppercase;letter-spacing:0.25em;">
+                  <td align="center" style="font-family:${fontDisplay};font-size:22px;font-weight:700;line-height:1.2;color:${emailColors.white};letter-spacing:-0.02em;">
+                    ${escapeHtml(site.shortName)}
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center" style="padding-top:8px;font-family:${fontBody};font-size:11px;font-weight:600;color:${emailColors.tealLight};text-transform:uppercase;letter-spacing:0.25em;">
                     Your home, elevated.
                   </td>
                 </tr>

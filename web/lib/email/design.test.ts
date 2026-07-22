@@ -1,11 +1,13 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  applyInlineBrandImageCids,
   buildEmailDocument,
   detailCard,
   emailButton,
   escapeHtml,
   escapeHtmlWithBreaks,
+  getBrandAvatarUrl,
   getBrandLogoUrl,
   wrapBrandedContent,
 } from "./design";
@@ -24,9 +26,13 @@ describe("email design", () => {
     assert.equal(escapeHtmlWithBreaks("<b>x</b>"), "&lt;b&gt;x&lt;/b&gt;");
   });
 
-  it("uses absolute brand logo URL", () => {
+  it("uses absolute brand logo and avatar URLs", () => {
     process.env.NEXT_PUBLIC_SITE_URL = "https://elevate.example.com";
     assert.equal(getBrandLogoUrl(), "https://elevate.example.com/logo.png");
+    assert.equal(
+      getBrandAvatarUrl(),
+      "https://elevate.example.com/logo-avatar.png"
+    );
   });
 
   it("builds a complete email document with required structure", () => {
@@ -41,7 +47,17 @@ describe("email design", () => {
     assert.match(html, /#0098e3/);
     assert.match(html, /#f5f9fd/);
     assert.match(html, /Your home, elevated\./);
-    assert.match(html, /logo\.png/);
+    assert.match(html, /logo-avatar\.png/);
+    assert.match(html, /border-radius:50%/);
+  });
+
+  it("rewrites remote brand image URLs to inline CIDs", () => {
+    process.env.NEXT_PUBLIC_SITE_URL = "https://elevate.example.com";
+    const html = `<img src="${getBrandAvatarUrl()}" /><img src="${getBrandLogoUrl()}" />`;
+    const inlined = applyInlineBrandImageCids(html);
+    assert.match(inlined, /cid:logo-avatar\.png/);
+    assert.match(inlined, /cid:logo\.png/);
+    assert.doesNotMatch(inlined, /elevate\.example\.com/);
   });
 
   it("escapes detail card values", () => {

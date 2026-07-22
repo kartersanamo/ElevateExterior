@@ -1,5 +1,12 @@
+import { promises as fs } from "fs";
+import path from "path";
 import FormData from "form-data";
 import Mailgun from "mailgun.js";
+import {
+  applyInlineBrandImageCids,
+  BRAND_AVATAR_CID,
+  BRAND_LOGO_CID,
+} from "@/lib/email/design";
 
 function stripEnvQuotes(value: string): string {
   const trimmed = value.trim();
@@ -54,6 +61,37 @@ export function getReplyToAddress(): string | null {
   return contact ?? null;
 }
 
+async function readPublicAsset(
+  filename: string
+): Promise<{ filename: string; data: Buffer } | null> {
+  const candidates = [
+    path.join(process.cwd(), "public", filename),
+    path.join(process.cwd(), "web", "public", filename),
+  ];
+
+  for (const filePath of candidates) {
+    try {
+      const data = await fs.readFile(filePath);
+      return { filename, data };
+    } catch {
+      // try next path
+    }
+  }
+
+  return null;
+}
+
+async function getBrandInlineImages() {
+  const [avatar, logo] = await Promise.all([
+    readPublicAsset(BRAND_AVATAR_CID),
+    readPublicAsset(BRAND_LOGO_CID),
+  ]);
+
+  return [avatar, logo].filter(
+    (file): file is { filename: string; data: Buffer } => file != null
+  );
+}
+
 export async function sendMail(options: {
   to: string | string[];
   subject: string;
@@ -76,12 +114,19 @@ export async function sendMail(options: {
       ? getReplyToAddress()
       : options.replyTo ?? undefined;
 
+  const inline = await getBrandInlineImages();
+  const html =
+    inline.length > 0
+      ? applyInlineBrandImageCids(options.html)
+      : options.html;
+
   await mailgun.messages.create(domain, {
     from,
     to,
     subject: options.subject,
     text: options.text,
-    html: options.html,
+    html,
     ...(replyTo ? { "h:Reply-To": replyTo } : {}),
+    ...(inline.length > 0 ? { inline } : {}),
   });
 }
