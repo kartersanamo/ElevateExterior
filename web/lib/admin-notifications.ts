@@ -21,6 +21,7 @@ export const ADMIN_NOTIFICATION_EVENTS: AdminNotificationEvent[] = [
   "BOOKING_REQUEST_SUBMITTED",
   "CUSTOMER_RESCHEDULED",
   "CUSTOMER_CANCELLED",
+  "BOOKING_REMINDER",
   "PAYMENT_RECEIVED",
   "REVIEW_DISCOUNT_CLAIMED",
 ];
@@ -60,6 +61,13 @@ export const ADMIN_NOTIFICATION_DEFINITIONS: AdminNotificationDefinition[] = [
     event: "CUSTOMER_CANCELLED",
     label: "Customer cancelled",
     description: "A customer cancels their appointment online.",
+    category: "bookings",
+  },
+  {
+    event: "BOOKING_REMINDER",
+    label: "Booking reminders",
+    description:
+      "Email reminders before confirmed appointments. Choose one or more times below.",
     category: "bookings",
   },
   {
@@ -111,7 +119,7 @@ export async function seedAdminNotificationPreferences(
       create: {
         adminUserId,
         event,
-        enabled: true,
+        enabled: event !== "BOOKING_REMINDER",
       },
       update: {},
     });

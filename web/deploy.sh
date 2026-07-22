@@ -88,6 +88,7 @@ docker run -d \
   "${ENV_FILE_ARGS[@]}" \
   -e HOSTNAME=0.0.0.0 \
   -e PORT=3000 \
+  -e TZ=America/Chicago \
   -e "NEXT_PUBLIC_SITE_URL=${SITE_URL}" \
   -e "AUTH_URL=${SITE_URL}" \
   -e "DATABASE_URL=file:/app/data/db.sqlite" \
@@ -103,6 +104,9 @@ echo ""
 echo "Then: sudo systemctl restart cloudflared"
 echo ""
 echo "Public URL: ${SITE_URL}"
+echo ""
+echo "Booking reminder cron (every 5 min) — set CRON_SECRET in .env, then:"
+echo "  */5 * * * * curl -fsS -H \"Authorization: Bearer \$CRON_SECRET\" \"${SITE_URL}/api/cron/booking-reminders\" >/dev/null"
 echo ""
 
 docker logs --tail 30 "${CONTAINER_NAME}"

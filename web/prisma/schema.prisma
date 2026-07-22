@@ -50,6 +50,7 @@ enum AdminNotificationEvent {
   BOOKING_REQUEST_SUBMITTED
   CUSTOMER_RESCHEDULED
   CUSTOMER_CANCELLED
+  BOOKING_REMINDER
   PAYMENT_RECEIVED
   REVIEW_DISCOUNT_CLAIMED
 }
@@ -63,6 +64,8 @@ model AdminUser {
   createdAt               DateTime                     @default(now())
   updatedAt               DateTime                     @updatedAt
   notificationPreferences AdminNotificationPreference[]
+  bookingReminderOffsets  AdminBookingReminderOffset[]
+  bookingReminderSends    AdminBookingReminderSendLog[]
 }
 
 model AdminNotificationPreference {
@@ -73,6 +76,36 @@ model AdminNotificationPreference {
   enabled     Boolean                @default(true)
 
   @@unique([adminUserId, event])
+}
+
+model AdminBookingReminderOffset {
+  id            String   @id @default(cuid())
+  adminUserId   String
+  adminUser     AdminUser @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+  /// Minutes before appointment start. Null when dayOf is true.
+  minutesBefore Int?
+  /// Send at dayOfAtTime on the appointment date instead of a relative offset.
+  dayOf         Boolean  @default(false)
+  /// HH:mm wall time on the appointment date (used when dayOf is true).
+  dayOfAtTime   String   @default("07:00")
+  createdAt     DateTime @default(now())
+
+  sendLogs AdminBookingReminderSendLog[]
+
+  @@index([adminUserId])
+}
+
+model AdminBookingReminderSendLog {
+  id        String   @id @default(cuid())
+  bookingId String
+  offsetId  String
+  offset    AdminBookingReminderOffset @relation(fields: [offsetId], references: [id], onDelete: Cascade)
+  adminUserId String
+  adminUser AdminUser @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+  sentAt    DateTime @default(now())
+
+  @@unique([bookingId, offsetId])
+  @@index([sentAt])
 }
 
 model AvailabilityRule {
