@@ -29,6 +29,7 @@ export function SiteLogo({
       height={309}
       className={`w-auto object-contain ${heightClass[size]} ${className}`}
       priority
+      unoptimized
     />
   );
 
