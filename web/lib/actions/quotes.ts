@@ -30,7 +30,7 @@ function quoteHoldExpiry(days: number): Date {
 
 export type SendQuoteResult =
   | { ok: true; token: string }
-  | { ok: false; needsConfirmation: true; message: string };
+  | { ok: false; error: string };
 
 export async function sendQuote(data: {
   quoteId: string;
@@ -40,7 +40,6 @@ export async function sendQuote(data: {
   proposedDate?: string;
   proposedStartTime?: string;
   proposedEndTime?: string;
-  confirmUnavailableSlot?: boolean;
 }): Promise<SendQuoteResult> {
   await requireAdmin();
 
@@ -93,16 +92,14 @@ export async function sendQuote(data: {
       dateStr,
       proposedStartTime,
       proposedEndTime,
-      { excludeQuoteId: data.quoteId }
+      { excludeQuoteId: data.quoteId, allowCustomRange: true }
     );
 
     if (conflictMessage) {
-      if (conflictMessage === "End time must be after start time.") {
-        throw new Error(conflictMessage);
-      }
-      if (!data.confirmUnavailableSlot) {
-        return { ok: false, needsConfirmation: true, message: conflictMessage };
-      }
+      return {
+        ok: false,
+        error: `${conflictMessage} Change the proposed time before sending.`,
+      };
     }
   }
 
@@ -172,7 +169,7 @@ export async function acceptQuote(data: {
   if (conflict) {
     return {
       ok: false,
-      error: "That time slot is no longer available. Please pick another.",
+      error: `${conflict} Please pick another time.`,
       needsNewSlot: true,
     };
   }

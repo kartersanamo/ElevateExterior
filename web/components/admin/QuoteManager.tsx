@@ -132,6 +132,7 @@ function formatCreatedAt(iso: string): string {
 export function QuoteManager({ quotes }: { quotes: QuoteRow[] }) {
   const router = useRouter();
   const successRef = useRef<HTMLDivElement>(null);
+  const scheduleRef = useRef<HTMLDivElement>(null);
   const [pending, startTransition] = useTransition();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -169,6 +170,31 @@ export function QuoteManager({ quotes }: { quotes: QuoteRow[] }) {
     setExpandedId((current) => (current === quoteId ? null : quoteId));
   };
 
+  const focusScheduleFields = () => {
+    setSlotConflict(null);
+    requestAnimationFrame(() => {
+      scheduleRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      const dateInput = scheduleRef.current?.querySelector<HTMLInputElement>(
+        'input[type="date"]'
+      );
+      dateInput?.focus();
+    });
+  };
+
+  const clearProposedScheduleAndRetry = () => {
+    setForm((current) => ({
+      ...current,
+      proposedDate: "",
+      proposedStartTime: "",
+      proposedEndTime: "",
+    }));
+    setSlotConflict(null);
+    setError("");
+    setMessage(
+      "Proposed time cleared. Send again to let the customer pick a time when they accept."
+    );
+  };
+
   const toggleService = (id: string) => {
     setForm((f) => ({
       ...f,
@@ -178,16 +204,14 @@ export function QuoteManager({ quotes }: { quotes: QuoteRow[] }) {
     }));
   };
 
-  const sendQuoteRequest = (confirmUnavailableSlot = false) => {
+  const sendQuoteRequest = () => {
     if (!active) return;
 
     setError("");
     setMessage("");
     setSentSuccess(null);
     setCopied(false);
-    if (!confirmUnavailableSlot) {
-      setSlotConflict(null);
-    }
+    setSlotConflict(null);
 
     startTransition(async () => {
       try {
@@ -199,11 +223,11 @@ export function QuoteManager({ quotes }: { quotes: QuoteRow[] }) {
           proposedDate: form.proposedDate || undefined,
           proposedStartTime: form.proposedStartTime || undefined,
           proposedEndTime: form.proposedEndTime || undefined,
-          confirmUnavailableSlot,
         });
 
         if (!result.ok) {
-          setSlotConflict(result.message);
+          setSlotConflict(result.error);
+          setError(result.error);
           return;
         }
 
@@ -578,7 +602,14 @@ export function QuoteManager({ quotes }: { quotes: QuoteRow[] }) {
                               />
                             </label>
 
-                            <div>
+                            <div
+                              ref={scheduleRef}
+                              className={
+                                slotConflict || error.toLowerCase().includes("time")
+                                  ? "rounded-xl ring-2 ring-amber-400 ring-offset-2"
+                                  : undefined
+                              }
+                            >
                               <p className="text-sm font-semibold text-forest">
                                 Proposed schedule
                               </p>
@@ -592,9 +623,10 @@ export function QuoteManager({ quotes }: { quotes: QuoteRow[] }) {
                                   <input
                                     type="date"
                                     value={form.proposedDate}
-                                    onChange={(e) =>
-                                      setForm({ ...form, proposedDate: e.target.value })
-                                    }
+                                    onChange={(e) => {
+                                      setSlotConflict(null);
+                                      setForm({ ...form, proposedDate: e.target.value });
+                                    }}
                                     className="form-input mt-1"
                                   />
                                 </label>
@@ -603,12 +635,13 @@ export function QuoteManager({ quotes }: { quotes: QuoteRow[] }) {
                                   <input
                                     type="time"
                                     value={form.proposedStartTime}
-                                    onChange={(e) =>
+                                    onChange={(e) => {
+                                      setSlotConflict(null);
                                       setForm({
                                         ...form,
                                         proposedStartTime: e.target.value,
-                                      })
-                                    }
+                                      });
+                                    }}
                                     className="form-input mt-1"
                                   />
                                 </label>
@@ -617,12 +650,13 @@ export function QuoteManager({ quotes }: { quotes: QuoteRow[] }) {
                                   <input
                                     type="time"
                                     value={form.proposedEndTime}
-                                    onChange={(e) =>
+                                    onChange={(e) => {
+                                      setSlotConflict(null);
                                       setForm({
                                         ...form,
                                         proposedEndTime: e.target.value,
-                                      })
-                                    }
+                                      });
+                                    }}
                                     className="form-input mt-1"
                                   />
                                 </label>
@@ -703,29 +737,29 @@ export function QuoteManager({ quotes }: { quotes: QuoteRow[] }) {
               id="slot-conflict-title"
               className="font-display text-lg font-bold text-forest"
             >
-              Time slot conflict
+              Time not available
             </h3>
             <p className="mt-3 text-sm text-slate/70">{slotConflict}</p>
             <p className="mt-2 text-sm text-slate/70">
-              The customer will still receive the quote with this proposed time. Send
-              anyway?
+              Change the proposed schedule, or clear it so the customer can pick a time
+              when they accept.
             </p>
             <div className="mt-6 flex flex-wrap justify-end gap-3">
               <button
                 type="button"
                 disabled={pending}
-                onClick={() => setSlotConflict(null)}
+                onClick={clearProposedScheduleAndRetry}
                 className="rounded-lg border border-slate/15 px-4 py-2 text-sm font-semibold text-slate/70 hover:bg-slate/5 disabled:opacity-50"
               >
-                Cancel
+                Clear proposed time
               </button>
               <button
                 type="button"
                 disabled={pending}
-                onClick={() => sendQuoteRequest(true)}
+                onClick={focusScheduleFields}
                 className="rounded-lg bg-teal px-4 py-2 text-sm font-semibold text-white hover:bg-teal/90 disabled:opacity-50"
               >
-                {pending ? "Sending…" : "Send quote anyway"}
+                Change time
               </button>
             </div>
           </div>

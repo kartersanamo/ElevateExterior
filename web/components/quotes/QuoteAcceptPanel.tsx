@@ -57,22 +57,32 @@ export function QuoteAcceptPanel({
       return;
     }
     startTransition(async () => {
-      const result = await acceptQuote({
-        token,
-        scheduledDate: slot?.date,
-        startTime: slot?.startTime,
-        endTime: slot?.endTime,
-      });
-      if (!result.ok) {
-        setError(result.error);
-        if (result.needsNewSlot) {
-          setNeedsNewSlot(true);
-          setSlot(null);
+      try {
+        const result = await acceptQuote({
+          token,
+          scheduledDate: slot?.date,
+          startTime: slot?.startTime,
+          endTime: slot?.endTime,
+        });
+        if (!result.ok) {
+          setError(result.error);
+          if (result.needsNewSlot) {
+            setNeedsNewSlot(true);
+            setSlot(null);
+          }
+          return;
         }
-        return;
+        setSuccess(true);
+        router.refresh();
+      } catch (e) {
+        setError(
+          e instanceof Error
+            ? e.message
+            : "That time slot is no longer available. Please pick another."
+        );
+        setNeedsNewSlot(true);
+        setSlot(null);
       }
-      setSuccess(true);
-      router.refresh();
     });
   };
 
